@@ -121,7 +121,7 @@ def oldest_ia_page(archive_url):
     url = re.search(r"(?:[0-9])\/(.*)", archive_url).group(1)
     url = ("https://archive.org/wayback/available?url={url}&timestamp=1998").format(url=url)
     oldest_archive_url = waybackpy.oldest(url,UA="User:YouTubeReviewBot on wikimedia commons")
-    webpage=get(oldest_archive_url,UA="User:YouTubeReviewBot on wikimedia commons")
+    webpage = waybackpy.get(oldest_archive_url,UA="User:YouTubeReviewBot on wikimedia commons")
     return webpage
 
 def archived_webpage(archive_url):
