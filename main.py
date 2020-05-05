@@ -2,10 +2,9 @@
 import re
 import sys
 import pywikibot
-import savepagenow
+import waybackpy
 from datetime import datetime
 from pywikibot import pagegenerators
-from urllib.request import Request, urlopen
 
 def uploader(filename, link=True):
     """User that uploaded the file."""
@@ -107,7 +106,7 @@ def archived_url(SourceURL):
     while status == "Wait":
         iters += 1
         try:
-            archive_url = savepagenow.capture(SourceURL, user_agent="User:YouTubeReviewBot on wikimedia commons")
+            archive_url = waybackpy.save(SourceURL, UA="User:YouTubeReviewBot on wikimedia commons")
             status = "Done"
         except Exception as e:
             out(
@@ -121,17 +120,8 @@ def archived_url(SourceURL):
 def oldest_ia_page(archive_url):
     url = re.search(r"(?:[0-9])\/(.*)", archive_url).group(1)
     url = ("https://archive.org/wayback/available?url={url}&timestamp=1998").format(url=url)
-    response = urlopen(url) #nosec
-    encoding = response.info().get_content_charset('utf8')
-    import json
-    data = json.loads(response.read().decode(encoding))
-    oldest_archive_url = (data["archived_snapshots"]["closest"]["url"])
-    req = Request(
-        oldest_archive_url,
-        headers={'User-Agent': 'User:YouTubeReviewBot on wikimedia commons'},
-        )
-    with urlopen(req) as conn: #nosec
-        webpage = str(conn.read().decode('utf-8', 'ignore'))
+    oldest_archive_url = waybackpy.oldest(url,UA="User:YouTubeReviewBot on wikimedia commons")
+    webpage=get(oldest_archive_url,UA="User:YouTubeReviewBot on wikimedia commons")
     return webpage
 
 def archived_webpage(archive_url):
@@ -142,12 +132,7 @@ def archived_webpage(archive_url):
     while status == "Wait":
         iters += 1
         try:
-            req = Request(
-                archive_url,
-                headers={'User-Agent': 'User:YouTubeReviewBot on wikimedia commons'},
-                )
-            with urlopen(req) as conn: #nosec
-                webpage = str(conn.read().decode('utf-8', 'ignore'))
+            webpage = waybackpy.get(archive_url,UA='User:YouTubeReviewBot on wikimedia commons')
             status = "Done"
         except Exception as e:
             out(
