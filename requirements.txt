@@ -1,2 +1,2 @@
 pywikibot==3.0.20200405
-waybackpy==1.4
+waybackpy==1.6
