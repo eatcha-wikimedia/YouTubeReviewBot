@@ -1,2 +1,2 @@
-pywikibot==3.0.20200405
+pywikibot==3.0.20200508
 waybackpy==1.6
