@@ -38,7 +38,7 @@ def informatdate():
     """Current date in yyyy-mm-dd format."""
     return (datetime.utcnow()).strftime('%Y-%m-%d')
 
-def AutoFill(site,webpage,text,source,author,VideoTitle,Replace_nld):
+def AutoFill(site, webpage, text, source, author, VideoTitle, Replace_nld):
     """Auto fills empty information template parameters."""
     if site == "YouTube":
         License = "{{YouTube CC-BY|%s}}" % author
@@ -69,6 +69,7 @@ def AutoFill(site,webpage,text,source,author,VideoTitle,Replace_nld):
     
     if Replace_nld:
         text = re.sub("{{No license since.*?}}", "%s" % License, text, re.IGNORECASE)
+        text = re.sub("{{(?:|\s)[Yy]ou(?:|\s)[Tt]ube(?:\||\s|)(?:[Cc]{2}-[Bb][Yy]|)(?:\||)(?:.*)}}", "%s" % License, text) # make uniform the License templates.
 
     return text
 
