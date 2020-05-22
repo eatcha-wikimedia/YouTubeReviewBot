@@ -619,7 +619,7 @@ def checkfiles():
                 )
 
             try:
-                old_text = AutoFill(
+                new_text = AutoFill(
                     "YouTube",
                     webpage,
                     old_text,
@@ -635,7 +635,7 @@ def checkfiles():
                 new_text = re.sub(
                     RegexOfLicenseReviewTemplate,
                     TAGS,
-                    old_text
+                    new_text
                     )
             else:
                 out(
