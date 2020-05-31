@@ -70,7 +70,7 @@ def AutoFill(site, webpage, text, source, author, VideoTitle, Replace_nld):
     if Replace_nld:
         text = re.sub("{{No license since.*?}}", "%s" % License, text, re.IGNORECASE)
         text = re.sub("{{(?:|\s)[Yy]ou(?:|\s)[Tt]ube(?:|\s)}}", "%s" % License, text)
-        text = re.sub("{{(?:|\s)[Yy]ou(?:|\s)[Tt]ube(?:|\s*?)(?:[Cc]{2}-[Bb][Yy]).*}}", "%s" % License, text)
+        text = re.sub("{{(?:|\s)[Yy]ou(?:|\s)[Tt]ube(?:|\s*?)(?:[Cc]{2}-[Bb][Yy]).*?}}", "%s" % License, text)
 
     return text
 
