@@ -34,6 +34,11 @@ def upload_date(filename):
     for info in (pywikibot.Page(SITE, filename)).revisions(reverse=True, total=1):
         return datetime.strptime(str(info.timestamp), "%Y-%m-%dT%H:%M:%SZ")
 
+def last_edit_time(file_name):
+    """Recent most editor for file."""
+    for info in (pywikibot.Page(SITE, file_name)).revisions(reverse=False, total=1):
+        return datetime.strptime(str(info.timestamp), "%Y-%m-%dT%H:%M:%SZ")
+
 def informatdate():
     """Current date in yyyy-mm-dd format."""
     return (datetime.utcnow()).strftime('%Y-%m-%d')
@@ -330,7 +335,7 @@ def checkfiles():
                     )
                 continue
 
-        elif (datetime.utcnow()-upload_date(filename)).days > 99**9:
+        elif (datetime.utcnow()-last_edit_time(filename)).days > 60:
             out(
                 "File is older than 2 months, will not process it.",
                 color='red',
