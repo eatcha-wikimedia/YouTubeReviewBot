@@ -286,7 +286,7 @@ def checkfiles():
             color="yellow",
             )
 
-        If not Identified_site:
+        if not Identified_site:
             continue
 
         if IsMarkedForDeletion(pagetext) is True:
