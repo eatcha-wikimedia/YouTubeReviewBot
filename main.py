@@ -396,6 +396,7 @@ def checkfiles():
             except Exception as e:
                 out(e, color="red")
                 dump_file(filename)
+                continue
 
             # Try to get the ChannelID
             try:
@@ -512,6 +513,7 @@ def checkfiles():
                         )
                     dump_file(filename)
                     continue
+
             SourceURL = "https://www.youtube.com/watch?v=%s" % YouTubeVideoId
 
             if archived_url(SourceURL) != None:
@@ -523,14 +525,19 @@ def checkfiles():
                     )
                 continue
 
-            if archived_webpage(archive_url) is None:
-                out(
-                    "WAYBACK FAILED - Can't get webpage",
-                    color='red',
-                    )
+            try:
+                if archived_webpage(archive_url) is None:
+                    out(
+                        "WAYBACK FAILED - Can't get webpage",
+                        color='red',
+                        )
+                    continue
+                else:
+                    webpage = archived_webpage(archive_url)
+            except Exception as e:
+                out(e, color="red")
+                dump_file(filename)
                 continue
-            else:
-                webpage = archived_webpage(archive_url)
 
             find_deleted = [
                 'YouTube account associated with this video has been terminated',
@@ -548,6 +555,7 @@ def checkfiles():
                         "DUMP - Video source URL is dead",
                         color="red",
                         )
+                    continue
                 else:
                     pass
 
@@ -611,6 +619,7 @@ def checkfiles():
                         color='yellow',
                         )
                     dump_file(filename)
+                    continue
 
             # Remove unwanted sysmbols that may fuck-up the wiki-text, if present in Video title or Channel Name
             YouTubeChannelName = re.sub(r'[{}\|\+\]\[]', r'-', YouTubeChannelName)
@@ -676,6 +685,7 @@ def checkfiles():
                     )
                 dump_file(filename)
                 continue
+
             if new_text == old_text:
                 out(
                     "IGONRE - New text was equal to Old text.",
