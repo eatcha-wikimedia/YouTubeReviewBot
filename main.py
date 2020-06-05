@@ -383,6 +383,7 @@ def checkfiles():
                         "WAYBACK FAILED - Can't get archive_url",
                         color='red',
                         )
+                    dump_file(filename)
                     continue
                 
                 if archived_webpage(archive_url) is None:
@@ -390,7 +391,9 @@ def checkfiles():
                         "WAYBACK FAILED - Can't get webpage",
                         color='red',
                         )
+                    dump_file(filename)
                     continue
+
                 else:
                     webpage = archived_webpage(archive_url)
             except Exception as e:
@@ -517,6 +520,7 @@ def checkfiles():
             SourceURL = "https://www.youtube.com/watch?v=%s" % YouTubeVideoId
 
             try:
+    
                 if archived_url(SourceURL) != None:
                     archive_url = archived_url(SourceURL)
                 else:
@@ -524,6 +528,7 @@ def checkfiles():
                         "WAYBACK FAILED - Can't get archive_url",
                         color='red',
                         )
+                    dump_file(filename)
                     continue
 
 
@@ -532,9 +537,11 @@ def checkfiles():
                         "WAYBACK FAILED - Can't get webpage",
                         color='red',
                         )
+                    dump_file(filename)
                     continue
                 else:
                     webpage = archived_webpage(archive_url)
+
             except Exception as e:
                 out(e, color="red")
                 dump_file(filename)
