@@ -43,7 +43,9 @@ def AutoFill(site, webpage, text, source, author, VideoTitle, Replace_nld):
     if site == "YouTube":
         License = "{{YouTube CC-BY|%s}}" % author
         date = re.search(r"<strong class=\"watch-time-text\">Published on ([A-Za-z]*?) ([0-9]{1,2}), ([0-9]{2,4})</strong>", webpage)
-        uploaddate = datetime.strptime(("%s %s %s" % (date.group(2), date.group(1), date.group(3))), "%d %b %Y").date()
+
+        if date:
+            uploaddate = datetime.strptime(("%s %s %s" % (date.group(2), date.group(1), date.group(3))), "%d %b %Y").date()
 
         try:
             description = re.search(r"<p id=\"eow-description\"(?:[^,]*?)>(.*?)<", webpage, re.MULTILINE|re.DOTALL).group(1)
@@ -63,10 +65,13 @@ def AutoFill(site, webpage, text, source, author, VideoTitle, Replace_nld):
     description = re.sub('https?://', '', description)
     if not re.search(r"\|description=(.*)",text).group(1):
         text = text.replace("|description=","|description=%s" % description ,1)
-    text = re.sub("\|date=.*", "|date=%s" % uploaddate, text)
+    
+    if date:
+        text = re.sub("\|date=.*", "|date=%s" % uploaddate, text)
+
     text = re.sub("\|source=.*", "|source=%s" % source, text)
     text = re.sub("\|author=.*", "|author=%s" % author, text)
-    
+
     if Replace_nld:
         text = re.sub("{{No license since.*?}}", "%s" % License, text, re.IGNORECASE)
         text = re.sub("{{(?:|\s)[Yy]ou(?:|\s)[Tt]ube(?:\|.*?|)(?:|\s)}}", "%s" % License, text)
@@ -592,7 +597,7 @@ def checkfiles():
                 "|id=" + YouTubeVideoId +
                 "|ChannelName=" + YouTubeChannelName +
                 "|ChannelID=" + YouTubeChannelId +
-                "|title=" + YouTubeVideoTitle +
+                "|title=" + YouTubeVideoTitle.strip() +
                 "|archive=" + archive_url +
                 "|date=" + informatdate() +
                 "}}"
@@ -631,6 +636,8 @@ def checkfiles():
                     )
             except Exception as e:
                 out(e,color="red")
+                out("failed to AutoFill")
+                new_text = old_text
 
             if re.search(r"Creative Commons", webpage) is not None or check_channel(YouTubeChannelId) == "Trusted":
                 new_text = re.sub(
