@@ -1,3 +1,3 @@
 #!/bin/bash
 git pull origin master
-python main.py -dry -pt:0
+python main.py -auto -pt:0
