@@ -516,16 +516,17 @@ def checkfiles():
 
             SourceURL = "https://www.youtube.com/watch?v=%s" % YouTubeVideoId
 
-            if archived_url(SourceURL) != None:
-                archive_url = archived_url(SourceURL)
-            else:
-                out(
-                    "WAYBACK FAILED - Can't get archive_url",
-                    color='red',
-                    )
-                continue
-
             try:
+                if archived_url(SourceURL) != None:
+                    archive_url = archived_url(SourceURL)
+                else:
+                    out(
+                        "WAYBACK FAILED - Can't get archive_url",
+                        color='red',
+                        )
+                    continue
+
+
                 if archived_webpage(archive_url) is None:
                     out(
                         "WAYBACK FAILED - Can't get webpage",
