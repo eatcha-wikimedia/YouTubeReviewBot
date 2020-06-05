@@ -257,6 +257,8 @@ def checkfiles():
         category,
         )
     file_count = 0
+    dumpHell = pywikibot.Page(SITE,"User:YouTubeReviewBot/dump3",).get(get_redirect=True)
+
     for page in gen:
         file_count += 1
         filename = page.title()
@@ -268,6 +270,13 @@ def checkfiles():
                 ),
                 color="white",
                 )
+
+        if filename in dumpHell:
+            out(
+                "IGNORE - File dumped for 3rd time.",
+                color='red',
+                )
+            continue
 
         page = pywikibot.Page(
             SITE,
@@ -297,13 +306,6 @@ def checkfiles():
         if IsMarkedForDeletion(pagetext) is True:
             out(
                 "IGNORE - File is marked for deletion",
-                color='red',
-                )
-            continue
-
-        elif filename in pywikibot.Page(SITE,"User:YouTubeReviewBot/dump3",).get(get_redirect=True):
-            out(
-                "IGNORE - File dumped for 3rd time.",
                 color='red',
                 )
             continue
@@ -372,24 +374,28 @@ def checkfiles():
                         )
                     continue
             SourceURL = "https://vimeo.com/%s" % VimeoVideoId
-
-            if archived_url(SourceURL) is not None:
-                archive_url = archived_url(SourceURL)
-            else:
-                out(
-                    "WAYBACK FAILED - Can't get archive_url",
-                    color='red',
-                    )
-                continue
-
-            if archived_webpage(archive_url) is None:
-                out(
-                    "WAYBACK FAILED - Can't get webpage",
-                    color='red',
-                    )
-                continue
-            else:
-                webpage = archived_webpage(archive_url)
+            
+            try:
+                if archived_url(SourceURL) is not None:
+                    archive_url = archived_url(SourceURL)
+                else:
+                    out(
+                        "WAYBACK FAILED - Can't get archive_url",
+                        color='red',
+                        )
+                    continue
+                
+                if archived_webpage(archive_url) is None:
+                    out(
+                        "WAYBACK FAILED - Can't get webpage",
+                        color='red',
+                        )
+                    continue
+                else:
+                    webpage = archived_webpage(archive_url)
+            except Exception as e:
+                out(e, color="red")
+                dump_file(filename)
 
             # Try to get the ChannelID
             try:
@@ -402,6 +408,7 @@ def checkfiles():
                         "PARSING FAILED - Can't get VimeoChannelId",
                         color='red',
                         )
+                    dump_file(filename)
                     continue
 
             # If bad Channel do not review it, we do not support trusted Channel for vimeo yet.
@@ -410,6 +417,7 @@ def checkfiles():
                     "IGNORE - Bad Channel %s" % VimeoChannelId,
                     color="red",
                     )
+                dump_file(filename)
                 continue
 
             # Try to get video title
@@ -420,6 +428,7 @@ def checkfiles():
                     "PARSING FAILED - Can't get VimeoVideoTitle",
                     color='red',
                     )
+                dump_file(filename)
                 continue
 
             if re.search(r"creativecommons.org", webpage):
@@ -439,6 +448,7 @@ def checkfiles():
                         "The file is licensed under %s, but it's not allowed on commons" % VimeoLicense,
                         color="red",
                         )
+                    dump_file(filename)
                     continue
                 else:pass
             else:
@@ -500,6 +510,7 @@ def checkfiles():
                         "PARSING FAILED - Can't get YouTubeVideoId",
                         color='red'
                         )
+                    dump_file(filename)
                     continue
             SourceURL = "https://www.youtube.com/watch?v=%s" % YouTubeVideoId
 
@@ -511,6 +522,7 @@ def checkfiles():
                     color='red',
                     )
                 continue
+
             if archived_webpage(archive_url) is None:
                 out(
                     "WAYBACK FAILED - Can't get webpage",
@@ -558,6 +570,7 @@ def checkfiles():
                         "PARSING FAILED - Can't get YouTubeChannelId",
                         color='red',
                         )
+                    dump_file(filename)
                     continue
 
             if check_channel(YouTubeChannelId) == "Bad":
@@ -565,6 +578,7 @@ def checkfiles():
                     "IGONRE - Bad Channel %s" % YouTubeChannelId,
                     color="red",
                     )
+                dump_file(filename)
                 continue
 
             # try to get Channel name
@@ -581,6 +595,7 @@ def checkfiles():
                             "PARSING FAILED - Can't get YouTubeChannelName",
                             color='red',
                             )
+                        dump_file(filename)
                         continue
 
             # try to get YouTube Video's Title
@@ -595,6 +610,7 @@ def checkfiles():
                         "PARSING FAILED - Can't get YouTubeVideoTitle setting filename as title",
                         color='yellow',
                         )
+                    dump_file(filename)
 
             # Remove unwanted sysmbols that may fuck-up the wiki-text, if present in Video title or Channel Name
             YouTubeChannelName = re.sub(r'[{}\|\+\]\[]', r'-', YouTubeChannelName)
