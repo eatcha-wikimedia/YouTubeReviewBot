@@ -42,7 +42,7 @@ def AutoFill(site, webpage, text, source, author, VideoTitle, Replace_nld):
     """Auto fills empty information template parameters."""
     if site == "YouTube":
         License = "{{YouTube CC-BY|%s}}" % author
-        date = re.search(r"<strong class=\"watch-time-text\">Published on ([A-Za-z]*?) ([0-9]{1,2}), ([0-9]{2,4})</strong>", webpage)
+        date = re.search(r"<strong class=\"watch-time-text\">(?:Published on|Premiered) ([A-Za-z]*?) ([0-9]{1,2}), ([0-9]{2,4})</strong>", webpage)
 
         if date:
             uploaddate = datetime.strptime(("%s %s %s" % (date.group(2), date.group(1), date.group(3))), "%d %b %Y").date()
