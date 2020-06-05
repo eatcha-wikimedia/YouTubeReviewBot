@@ -330,7 +330,7 @@ def checkfiles():
                     )
                 continue
 
-        elif (datetime.utcnow()-upload_date(filename)).days > 61:
+        elif (datetime.utcnow()-upload_date(filename)).days > 99**9:
             out(
                 "File is older than 2 months, will not process it.",
                 color='red',
