@@ -337,9 +337,9 @@ def checkfiles():
                     )
                 continue
 
-        elif (datetime.utcnow()-last_edit_time(filename)).days > 99**9:
+        elif (datetime.utcnow()-last_edit_time(filename)).days > 60:
             out(
-                "File is older than 2 months, will not process it.",
+                "File is not edited for a long time 2 months, will not process it.",
                 color='red',
                 )
             continue
@@ -719,12 +719,8 @@ def checkfiles():
             continue
 
 def report_err(e):
-    commit(
-        (pywikibot.Page(SITE, "User:YouTubeReviewBot/err")).get(get_redirect=True, force=True),
-        e),
-        pywikibot.Page(SITE, "User:YouTubeReviewBot/err"),
-        "Error : %s" % e
-        )
+    page = pywikibot.Page(SITE, "User:YouTubeReviewBot/err")
+    commit(page.get(), e, page, "Error : %s" % e)
 
 # Global variables defined at the module level
 DRY = None
