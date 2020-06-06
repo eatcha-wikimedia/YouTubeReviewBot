@@ -718,12 +718,12 @@ def checkfiles():
         else:
             continue
 
-def report_run():
+def report_err(e):
     commit(
-        (pywikibot.Page(SITE, "User:YouTubeReviewBot/last run time")).get(get_redirect=True, force=True),
-        str(datetime.utcnow()),
-        pywikibot.Page(SITE, "User:YouTubeReviewBot/last run time"),
-        "Updating last complete run time"
+        (pywikibot.Page(SITE, "User:YouTubeReviewBot/err")).get(get_redirect=True, force=True),
+        e),
+        pywikibot.Page(SITE, "User:YouTubeReviewBot/err"),
+        "Error : %s" % e
         )
 
 # Global variables defined at the module level
@@ -764,9 +764,10 @@ def main(*args):
                     color="lightred",
                     )
                 sys.exit(0)
-
-    checkfiles()
-    report_run()
+    try:
+        checkfiles()
+    except Exception as e:
+        report_err(e)
 
 if __name__ == "__main__":
     try:
