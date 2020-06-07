@@ -65,7 +65,7 @@ def AutoFill(site, webpage, text, source, author, VideoTitle, Replace_nld):
             description = get_yt_desc(webpage)
         except AttributeError:
             try:
-                description = re.search(r"<meta name=\"description\" content=\"(.*?)\">", webpage, re.MULTILINE|re.DOTALL).group(1)
+                description = re.search(r"<p id=\"eow-description\"(?:[^,]*?)>(.*?)<", webpage, re.MULTILINE|re.DOTALL).group(1)
             except AttributeError:
                 description = VideoTitle
         # Handle cases where there's no description at all on YouTube
