@@ -289,6 +289,7 @@ def checkfiles():
                 "File is not edited for a long time 1 months, will not process it.",
                 color='red',
                 )
+            dump_file(filename)
             continue
 
         page = pywikibot.Page(
