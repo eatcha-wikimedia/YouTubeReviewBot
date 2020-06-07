@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 import re
 import sys
-import waybackpy
 import pywikibot
-from pywikibot import pagegenerators
+import waybackpy
+import langdetect as lang
 from datetime import datetime
+from pywikibot import pagegenerators
+
 
 def uploader(filename, link=True):
     """User that uploaded the file."""
@@ -63,12 +65,15 @@ def AutoFill(site, webpage, text, source, author, VideoTitle, Replace_nld):
         if description.isspace() or not description:
             description = VideoTitle
 
-    elif site == "Vimeo": #Not Implemented yet
+    elif site == "Vimeo": #Not Implemented yet, not required yet
         uploaddate = ""
         description = ""
+
     #remove scheme from urls
-    description = re.sub('https?://', '', description)
+    description = re.sub('https?://', '', description).strip()
+    
     if not re.search(r"\|description=(.*)",text).group(1):
+        description = "{{%s|%s}}" % (lang.detect(description), description)
         text = text.replace("|description=","|description=%s" % description ,1)
     
     if date:
@@ -670,7 +675,7 @@ def checkfiles():
                     "YouTube",
                     webpage,
                     old_text,
-                    ("{{From YouTube|1=%s|2=%s}}" % (YouTubeVideoId, YouTubeVideoTitle)),
+                    ("{{From YouTube|1=%s|2=%s}}" % (YouTubeVideoId, YouTubeVideoTitle.strip())),
                     ("[https://www.youtube.com/channel/%s %s]" % (YouTubeChannelId, YouTubeChannelName)),
                     YouTubeVideoTitle,
                     Replace_nld
