@@ -282,6 +282,14 @@ def checkfiles():
                 color='red',
                 )
             continue
+        
+
+        if (datetime.utcnow()-last_edit_time(filename)).days > 30:
+            out(
+                "File is not edited for a long time 1 months, will not process it.",
+                color='red',
+                )
+            continue
 
         page = pywikibot.Page(
             SITE,
@@ -341,13 +349,6 @@ def checkfiles():
                     color='red',
                     )
                 continue
-
-        elif (datetime.utcnow()-last_edit_time(filename)).days > 60:
-            out(
-                "File is not edited for a long time 2 months, will not process it.",
-                color='red',
-                )
-            continue
 
         elif Identified_site == "Flickr":
             new_text = re.sub(RegexOfLicenseReviewTemplate, "{{FlickrReview}}" , old_text)
