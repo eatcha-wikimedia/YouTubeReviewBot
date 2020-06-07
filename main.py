@@ -45,6 +45,13 @@ def informatdate():
     """Current date in yyyy-mm-dd format."""
     return (datetime.utcnow()).strftime('%Y-%m-%d')
 
+def get_yt_desc(webpage):
+    text = re.search(r"<p id=\"eow-description\"(?:[^,]*?)>(.*?)<\/p>", webpage).group(1)
+    text = re.sub(r"<a href=.*?>|</a>", "",text) # remove yt/ wayback trackers
+    text = re.sub(r"<br/>","\n",text) # change <br/> to newline
+    text = re.sub(r"https?:\/\/.*[\r\n]*", "", text, flags=re.MULTILINE) # remove urls
+    return text
+
 def AutoFill(site, webpage, text, source, author, VideoTitle, Replace_nld):
     """Auto fills empty information template parameters."""
     if site == "YouTube":
@@ -55,7 +62,7 @@ def AutoFill(site, webpage, text, source, author, VideoTitle, Replace_nld):
             uploaddate = datetime.strptime(("%s %s %s" % (date.group(2), date.group(1), date.group(3))), "%d %b %Y").date()
 
         try:
-            description = re.search(r"<p id=\"eow-description\"(?:[^,]*?)>(.*?)<", webpage, re.MULTILINE|re.DOTALL).group(1)
+            description = get_yt_desc(webpage)
         except AttributeError:
             try:
                 description = re.search(r"<meta name=\"description\" content=\"(.*?)\">", webpage, re.MULTILINE|re.DOTALL).group(1)
