@@ -1,3 +1,3 @@
-pywikibot==3.0.20200609
+pywikibot==3.0.20200703
 waybackpy==1.6
 langdetect==1.0.8
