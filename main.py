@@ -159,7 +159,7 @@ def archived_webpage(archive_url):
     while status == "Wait":
         iters += 1
         try:
-            target = waybackpy.Url(archive_url, "User:YouTubeReviewBot on wikimedia commons").get()
+            webpage = waybackpy.Url(archive_url, "User:YouTubeReviewBot on wikimedia commons").get()
             status = "Done"
         except Exception as e:
             out(
