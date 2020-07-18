@@ -134,7 +134,7 @@ def archived_url(SourceURL):
     while status == "Wait":
         iters += 1
         try:
-            archive_url = waybackpy.save(SourceURL, UA="User:YouTubeReviewBot on wikimedia commons")
+            archive_url = waybackpy.Url(SourceURL, "User:YouTubeReviewBot on wikimedia commons").save()
             status = "Done"
         except Exception as e:
             out(
@@ -148,9 +148,8 @@ def archived_url(SourceURL):
 def oldest_ia_page(archive_url):
     url = re.search(r"(?:[0-9])\/(.*)", archive_url).group(1)
     url = ("https://archive.org/wayback/available?url={url}&timestamp=1998").format(url=url)
-    oldest_archive_url = waybackpy.oldest(url,UA="User:YouTubeReviewBot on wikimedia commons")
-    webpage = waybackpy.get(oldest_archive_url,UA="User:YouTubeReviewBot on wikimedia commons")
-    return webpage
+    target = waybackpy.Url(url, "User:YouTubeReviewBot on wikimedia commons")
+    return target.get(target.oldest())
 
 def archived_webpage(archive_url):
     """Get the source code of the archived webpage."""
@@ -160,7 +159,7 @@ def archived_webpage(archive_url):
     while status == "Wait":
         iters += 1
         try:
-            webpage = waybackpy.get(archive_url,UA='User:YouTubeReviewBot on wikimedia commons')
+            target = waybackpy.Url(archive_url, "User:YouTubeReviewBot on wikimedia commons").get()
             status = "Done"
         except Exception as e:
             out(
