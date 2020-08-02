@@ -3,6 +3,7 @@ import re
 import sys
 import pywikibot
 import waybackpy
+import requests
 import langdetect as lang
 from datetime import datetime
 from pywikibot import pagegenerators
@@ -45,33 +46,11 @@ def informatdate():
     """Current date in yyyy-mm-dd format."""
     return (datetime.utcnow()).strftime('%Y-%m-%d')
 
-def get_yt_desc(webpage):
-    text = re.search(r"<p id=\"eow-description\"(?:[^,]*?)>(.*?)<\/p>", webpage).group(1)
-    text = re.sub(r"<a href=.*?>|</a>", "",text) # remove yt/ wayback trackers
-    text = re.sub(r"<br/>","\n",text) # change <br/> to newline
-    text = re.sub(r"https?:\/\/.*[\r\n]*", "", text, flags=re.MULTILINE) # remove urls
-    return text
-
-def AutoFill(site, webpage, text, source, author, VideoTitle, Replace_nld):
+def AutoFill(site, text, source, author, VideoTitle, uploaddate, description, Replace_nld):
     """Auto fills empty information template parameters."""
     if site == "YouTube":
         License = "{{YouTube CC-BY|%s}}" % author
-        uploaddate = ""
-        date = re.search(r"<strong class=\"watch-time-text\">(?:Published on|Premiered) ([A-Za-z]*?) ([0-9]{1,2}), ([0-9]{2,4})</strong>", webpage)
-        if date:
-            uploaddate = datetime.strptime(("%s %s %s" % (date.group(2), date.group(1), date.group(3))), "%d %b %Y").date()
-        else:
-            date = re.search(r"\"dateText\":{\"simpleText\":\"([A-Za-z]*?) ([0-9]{1,2}), ([0-9]{2,4})\"}", webpage)
-            if date:
-                uploaddate = datetime.strptime(("%s %s %s" % (date.group(2), date.group(1), date.group(3))), "%d %b %Y").date()
 
-        try:
-            description = get_yt_desc(webpage)
-        except AttributeError:
-            try:
-                description = re.search(r"<p id=\"eow-description\"(?:[^,]*?)>(.*?)<", webpage, re.MULTILINE|re.DOTALL).group(1)
-            except AttributeError:
-                description = VideoTitle
         # Handle cases where there's no description at all on YouTube
         if description.isspace() or not description:
             description = VideoTitle
@@ -82,12 +61,12 @@ def AutoFill(site, webpage, text, source, author, VideoTitle, Replace_nld):
 
     #remove scheme from urls
     description = re.sub('https?://', '', description).strip()
-    
+
     if not re.search(r"\|description=(.*)",text).group(1):
         description = "{{%s|%s}}" % (lang.detect(description), description)
         text = text.replace("|description=","|description=%s" % description ,1)
-    
-    if date:
+
+    if uploaddate:
         text = re.sub("\|date=.*", "|date=%s" % uploaddate, text)
 
     text = re.sub("\|source=.*", "|source=%s" % source, text)
@@ -97,7 +76,6 @@ def AutoFill(site, webpage, text, source, author, VideoTitle, Replace_nld):
         text = re.sub("{{No license since.*?}}", "%s" % License, text, re.IGNORECASE)
         text = re.sub("{{(?:|\s)[Yy]ou(?:|\s)[Tt]ube(?:\|.*?|)(?:|\s)}}", "%s" % License, text)
         text = re.sub("{{(?:|\s)[Yy]ou(?:|\s)[Tt]ube(?:|\s*?)(?:[Cc]{2}-[Bb][Yy]).*?}}", "%s" % License, text)
-
     return text
 
 def IsMarkedForDeletion(pagetext):
@@ -292,7 +270,7 @@ def checkfiles():
                 color='red',
                 )
             continue
-        
+
 
         if (datetime.utcnow()-last_edit_time(filename)).days > 30:
             out(
@@ -391,7 +369,7 @@ def checkfiles():
                         )
                     continue
             SourceURL = "https://vimeo.com/%s" % VimeoVideoId
-            
+
             try:
                 if archived_url(SourceURL) is not None:
                     archive_url = archived_url(SourceURL)
@@ -402,7 +380,7 @@ def checkfiles():
                         )
                     dump_file(filename)
                     continue
-                
+
                 if archived_webpage(archive_url) is None:
                     out(
                         "WAYBACK FAILED - Can't get webpage",
@@ -520,6 +498,7 @@ def checkfiles():
                 continue
 
         elif Identified_site == "YouTube":
+
             try:
                 YouTubeVideoId = re.search(
                     r"{{\s*?[Ff]rom\s[Yy]ou[Tt]ube\s*(?:\||\|1\=|\s*?)(?:\s*)(?:1|=\||)(?:=|)([^\"&?\/ ]{11})", source_area).group(1)
@@ -536,133 +515,35 @@ def checkfiles():
 
             SourceURL = "https://www.youtube.com/watch?v=%s" % YouTubeVideoId
 
-            try:
-    
-                if archived_url(SourceURL) != None:
-                    archive_url = archived_url(SourceURL)
-                else:
-                    out(
-                        "WAYBACK FAILED - Can't get archive_url",
-                        color='red',
-                        )
-                    dump_file(filename)
-                    continue
+            res = requests.get("https://eatchabot.toolforge.org/youtube?url=%s&user_agent=%s" % (SourceURL, "User:YouTubeReviewBot on wikimedia commons"))
 
+            data = res.json()
 
-                if archived_webpage(archive_url) is None:
-                    out(
-                        "WAYBACK FAILED - Can't get webpage",
-                        color='red',
-                        )
-                    dump_file(filename)
-                    continue
-                else:
-                    webpage = archived_webpage(archive_url)
-
-            except Exception as e:
-                out(e, color="red")
+            if data['available']:
+                archive_url = data['archive_url']
+                YouTubeVideoTitle = data['video_title']
+                YouTubeChannelName = data['channel_name']
+                description = data['description']
+                upload_date = data['upload_date']
+                YouTubeChannelId = data['channel_id']
+                license = data['license']
+            else:
                 dump_file(filename)
-                continue
 
-            find_deleted = [
-                'YouTube account associated with this video has been terminated',
-                'playerErrorMessageRenderer',
-                'Video unavailable',
-                'If the owner of this video has granted you access',
-                'This video has been removed by the uploader',
-                'Sign in to confirm your age',
-                ]
-
-            for line in find_deleted:
-                if line in webpage:
-                    dump_file(filename)
-                    out(
-                        "DUMP - Video source URL is dead",
-                        color="red",
-                        )
-                    continue
-                else:
-                    pass
-
-            YouTubeChannelIdRegex1 = r"data-channel-external-id=\"(.{0,30})\""
-            YouTubeChannelIdRegex2 = r"[\"']externalChannelId[\"']:[\"']([a-zA-Z0-9_-]{0,25})[\"']"
-            YouTubeChannelNameRegex1 = r"\\\",\\\"author\\\":\\\"(.{1,50})\\\",\\\""
-            YouTubeChannelNameRegex2 = r"\"ownerChannelName\\\":\\\"(.{1,50})\\\","
-            YouTubeChannelNameRegex3 = r"Unsubscribe from ([^<{]*?)\?"
-            YouTubeVideoTitleRegex1 = r"<title>(?:\s*|)(.{1,250})(?:\s*|)- YouTube(?:\s*|)</title>"
-            YouTubeVideoTitleRegex2 = r"\"title\":\"(.{1,160})\",\"length"
-
-            # try to get channel Id
-            try:
-                YouTubeChannelId = re.search(YouTubeChannelIdRegex1,webpage).group(1)
-            except AttributeError:
-                try:
-                    YouTubeChannelId = re.search(YouTubeChannelIdRegex2,webpage).group(1)
-                except AttributeError:
-                    out(
-                        "PARSING FAILED - Can't get YouTubeChannelId",
-                        color='red',
-                        )
-                    dump_file(filename)
-                    continue
-
-            if check_channel(YouTubeChannelId) == "Bad":
-                out(
-                    "IGONRE - Bad Channel %s" % YouTubeChannelId,
-                    color="red",
-                    )
-                dump_file(filename)
-                continue
-
-            # try to get Channel name
-            try:
-                YouTubeChannelName  = re.search(YouTubeChannelNameRegex1, webpage).group(1)
-            except AttributeError:
-                try:
-                    YouTubeChannelName  = re.search(YouTubeChannelNameRegex2, webpage).group(1)
-                except AttributeError:
-                    try:
-                        YouTubeChannelName  = re.search(YouTubeChannelNameRegex3, webpage).group(1)
-                    except AttributeError:
-                        out(
-                            "PARSING FAILED - Can't get YouTubeChannelName",
-                            color='red',
-                            )
-                        dump_file(filename)
-                        continue
-
-            # try to get YouTube Video's Title
-            try:
-                YouTubeVideoTitle   = re.search(YouTubeVideoTitleRegex1, webpage).group(1)
-            except AttributeError:
-                try:
-                    YouTubeVideoTitle   = re.search(YouTubeVideoTitleRegex2, webpage).group(1)
-                except AttributeError:
-                    YouTubeVideoTitle = filename.replace('File:', '', 1).replace('.webm', '', 1).replace('.ogv', '', 1)
-                    out(
-                        "PARSING FAILED - Can't get YouTubeVideoTitle setting filename as title",
-                        color='yellow',
-                        )
-                    dump_file(filename)
-                    continue
-
-            # Remove unwanted sysmbols that may fuck-up the wiki-text, if present in Video title or Channel Name
-            YouTubeChannelName = re.sub(r'[{}\|\+\]\[]', r'-', YouTubeChannelName)
-            YouTubeVideoTitle  = re.sub(r'[{}\|\+\]\[]', r'-', YouTubeVideoTitle)
 
             TAGS = str(
                 "{{YouTubeReview"
                 "|id=" + YouTubeVideoId +
                 "|ChannelName=" + YouTubeChannelName +
                 "|ChannelID=" + YouTubeChannelId +
-                "|title=" + YouTubeVideoTitle.strip() +
+                "|title=" + YouTubeVideoTitle +
                 "|archive=" + archive_url +
                 "|date=" + informatdate() +
                 "}}"
                 )
 
             #Out puts some basic info about the video.
-            display_video_info(YouTubeVideoId,YouTubeChannelId,YouTubeVideoTitle,archive_url,ChannelName=YouTubeChannelName)
+            display_video_info(YouTubeVideoId,YouTubeChannelId,YouTubeVideoTitle,archive_url, ChannelName=YouTubeChannelName)
 
             if check_channel(YouTubeChannelId) == "Trusted":
                 TrustTextAppend = "[[User:YouTubeReviewBot/Trusted|✔️ - Trusted YouTube Channel of  %s ]]" %  YouTubeChannelName
@@ -682,32 +563,27 @@ def checkfiles():
                 YouTubeVideoId,
                 )
 
-            try:
-                new_text = AutoFill(
-                    "YouTube",
-                    webpage,
-                    old_text,
-                    ("{{From YouTube|1=%s|2=%s}}" % (YouTubeVideoId, YouTubeVideoTitle.strip())),
-                    ("[https://www.youtube.com/channel/%s %s]" % (YouTubeChannelId, YouTubeChannelName)),
-                    YouTubeVideoTitle,
-                    Replace_nld
-                    )
-            except Exception as e:
-                out(e,color="red")
-                out("failed to AutoFill")
-                new_text = old_text
 
-            if re.search(r"Creative Commons", webpage) is not None or check_channel(YouTubeChannelId) == "Trusted":
+            new_text = AutoFill(
+                "YouTube",
+                old_text,
+                ("{{From YouTube|1=%s|2=%s}}" % (YouTubeVideoId, YouTubeVideoTitle)),
+                ("[https://www.youtube.com/channel/%s %s]" % (YouTubeChannelId, YouTubeChannelName)),
+                YouTubeVideoTitle,
+                upload_date,
+                description,
+                Replace_nld
+                )
+
+
+            if re.search(r"Creative Commons", license) is not None or check_channel(YouTubeChannelId) == "Trusted":
                 new_text = re.sub(
                     RegexOfLicenseReviewTemplate,
                     TAGS,
                     new_text
                     )
             else:
-                out(
-                    "Video is not Creative Commons 3.0 licensed on YouTube nor from a Trusted Channel",
-                    color="red"
-                    )
+                out("Video is not Creative Commons 3.0 licensed on YouTube nor from a Trusted Channel",color="red")
                 dump_file(filename)
                 continue
 
@@ -780,6 +656,7 @@ def main(*args):
     try:
         checkfiles()
     except Exception as e:
+        out(e, color="red")
         report_err(e)
 
 if __name__ == "__main__":
