@@ -611,10 +611,6 @@ def checkfiles():
         else:
             continue
 
-def report_err(e):
-    page = pywikibot.Page(SITE, "User:YouTubeReviewBot/err")
-    commit(page.get(), e, page, "Error : %s" % e)
-
 # Global variables defined at the module level
 DRY = None
 AUTO = None
@@ -657,7 +653,7 @@ def main(*args):
         checkfiles()
     except Exception as e:
         out(e, color="red")
-        report_err(e)
+
 
 if __name__ == "__main__":
     try:
