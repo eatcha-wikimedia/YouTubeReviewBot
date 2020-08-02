@@ -530,6 +530,31 @@ def checkfiles():
             else:
                 dump_file(filename)
 
+            total_none = 0
+            if not data['video_title']:
+                YouTubeVideoTitle = ""
+                total_none += 1
+                out("Not found video_title in %s" % archive_url)
+            if not data["channel_id"]:
+                YouTubeChannelId = ""
+                total_none += 1
+                out("Not found channel_id in %s" % archive_url)
+            if not data['channel_name']:
+                YouTubeChannelName = ""
+                total_none += 1
+                out("Not found channel_name in %s" % archive_url)
+            if not data["description"]:
+                description = ""
+                total_none += 1
+                out("Not found description in %s" % archive_url)
+            if not data['upload_date']:
+                upload_date = ""
+                total_none += 1
+                out("Not found upload_date in %s" % archive_url)
+
+            if total_none >= 3:
+                out("Can not parse any data from %s. Ignoring file." % archive_url)
+                continue
 
             TAGS = str(
                 "{{YouTubeReview"
