@@ -159,6 +159,7 @@ def checkfiles():
         out("A file from %s." % Identified_site, color="yellow")
 
         if not Identified_site:
+            out("Skipping cuz source unidentified.", color="yellow")
             continue
 
         if IsMarkedForDeletion(pagetext) is True:
@@ -213,8 +214,6 @@ def checkfiles():
                 try:
                     archive_url = waybackpy.Url(SourceURL, user_agent).save()
                 except Exception as e:
-                    reason = "Unable to archive %s" % SourceURL
-                    dump_file(filename, reason)
                     out(e, color="red")
                     continue
 
@@ -322,11 +321,15 @@ def checkfiles():
                     continue
 
             SourceURL = "https://www.youtube.com/watch?v=%s" % YouTubeVideoId
+            out(SourceURL)
+
 
             res = requests.get("https://eatchabot.toolforge.org/youtube?url=%s&user_agent=%s" % (SourceURL, "User:YouTubeReviewBot on wikimedia commons"))
-
-            data = res.json()
-
+            if res.status_code == 200:
+                data = res.json()
+            else:
+                out("Status code %s. Skipping" % (res.status_code) , color="red")
+                continue
 
 
             if data['available']:
@@ -344,10 +347,6 @@ def checkfiles():
                 out(reason, color="red")
                 dump_file(filename, reason)
                 continue
-            else: # we don't wanna dump files just 'bcuz there is lag on IA's side.
-                pprint.pprint(data, width=1)
-                out("WayBack machine didn't returned the archive_url.")
-                continue
 
             #Out puts some basic info about the video.
             display_video_info(YouTubeVideoId, YouTubeChannelId, YouTubeVideoTitle, archive_url, ChannelName=YouTubeChannelName)
@@ -363,6 +362,11 @@ def checkfiles():
                 "}}"
                 )
 
+            if check_channel(YouTubeChannelId) != "Trusted" and not re.search(r"Creative Commons", license):
+                reason = "File not from trusted channel nor freely licensed."
+                out(reason, color="red")
+                dump_file(filename, reason)
+                continue
 
             if check_channel(YouTubeChannelId) == "Trusted":
                 TrustTextAppend = "[[User:YouTubeReviewBot/Trusted|✔️ - Trusted YouTube Channel of  %s ]]" %  YouTubeChannelName
@@ -395,7 +399,7 @@ def checkfiles():
                 )
 
 
-            if re.search(r"Creative Commons", license) is not None or check_channel(YouTubeChannelId) == "Trusted":
+            if re.search(r"Creative Commons", license) or check_channel(YouTubeChannelId) == "Trusted":
                 new_text = re.sub(
                     RegexOfLicenseReviewTemplate,
                     TAGS,
