@@ -5,6 +5,7 @@ import pywikibot
 import waybackpy
 import requests
 import logging
+import pprint
 import langdetect as lang
 from datetime import datetime
 from pywikibot import pagegenerators
@@ -21,17 +22,22 @@ display_video_info,
 out,
 )
 
-def dump_file(filename):
+def dump_file(filename, reason):
     """Dump files if review not possible for multiple times."""
     dump1_pagetext = pywikibot.Page(SITE,"User:YouTubeReviewBot/dump1",).get(get_redirect=True)
     dump2_pagetext = pywikibot.Page(SITE,"User:YouTubeReviewBot/dump2",).get(get_redirect=True)
     dump3_pagetext = pywikibot.Page(SITE,"User:YouTubeReviewBot/dump3",).get(get_redirect=True)
+
+    summary = "Dumped [[%s]]. (%s)" % (filename, reason)
+
+    file_info = "\n#[[:" + filename + "]]  Reason : " + reason
+
     if filename in dump2_pagetext:
-        commit(dump3_pagetext,(dump3_pagetext + "\n#[[:" + filename + "]]"),pywikibot.Page(SITE,"User:YouTubeReviewBot/dump3",),"dumped [[%s]]" % filename ,)
+        commit(dump3_pagetext,(dump3_pagetext + file_info), pywikibot.Page(SITE,"User:YouTubeReviewBot/dump3",), summary)
     elif filename in dump1_pagetext:
-        commit(dump2_pagetext,(dump2_pagetext + "\n#[[:" + filename + "]]"),pywikibot.Page(SITE,"User:YouTubeReviewBot/dump2",),"dumped [[%s]]" % filename ,)
+        commit(dump2_pagetext,(dump2_pagetext + file_info), pywikibot.Page(SITE,"User:YouTubeReviewBot/dump2",), summary)
     else:
-        commit(dump1_pagetext,(dump1_pagetext + "\n#[[:" + filename + "]]"),pywikibot.Page(SITE,"User:YouTubeReviewBot/dump1",),"dumped [[%s]]" % filename ,)
+        commit(dump1_pagetext,(dump1_pagetext + file_info), pywikibot.Page(SITE,"User:YouTubeReviewBot/dump1",), summary)
 
 def commit(old_text, new_text, page, summary):
     """Show diff and submit text to the wiki server."""
@@ -86,9 +92,8 @@ def AutoFill(site, text, source, author, VideoTitle, uploaddate, description, Re
         description = ""
 
     #remove scheme from urls
-    description = re.sub('https?://', '', description).strip()
 
-    if not re.search(r"\|description=(.*)",text):
+    if re.search(r"\|description=\n",text):
         description = "{{%s|%s}}" % (lang.detect(description), description)
         text = text.replace("|description=","|description=%s" % description ,1)
 
@@ -133,8 +138,9 @@ def checkfiles():
             continue
 
         if (datetime.utcnow()-last_edit_time(filename)).days > 30:
-            out("''%s' is not edited for more than a 1 month, skipping it." % filename, color='red')
-            dump_file(filename)
+            reason = "Not edited for more than a month."
+            out(reason, color='red')
+            dump_file(filename, reason)
             continue
 
         page = pywikibot.Page(SITE, filename)
@@ -207,15 +213,17 @@ def checkfiles():
                 try:
                     archive_url = waybackpy.Url(SourceURL, user_agent).save()
                 except Exception as e:
-                    dump_file(filename)
+                    reason = "Unable to archive %s" % SourceURL
+                    dump_file(filename, reason)
                     out(e, color="red")
                     continue
 
             try:
                 webpage = waybackpy.Url(SourceURL, user_agent).get()
             except Exception as e:
+                reason = "Unable to get source code of %s" % SourceURL
                 out(e, color="red")
-                dump_file(filename)
+                dump_file(filename, reason)
                 continue
 
 
@@ -226,31 +234,25 @@ def checkfiles():
                 try:
                     VimeoChannelId = re.search(r"https://vimeo\.com/([^:/\"]{0,250}?)/videos\"", webpage).group(1)
                 except AttributeError:
-                    out(
-                        "PARSING FAILED - Can't get VimeoChannelId",
-                        color='red',
-                        )
-                    dump_file(filename)
+                    reason = "PARSING FAILED - Can't get VimeoChannelId"
+                    out(reason, color='red')
+                    dump_file(filename, reason)
                     continue
 
             # If bad Channel do not review it, we do not support trusted Channel for vimeo yet.
             if check_channel(VimeoChannelId) == "Bad":
-                out(
-                    "IGNORE - Bad Channel %s" % VimeoChannelId,
-                    color="red",
-                    )
-                dump_file(filename)
+                reason = "DUMP - %s is from a shady channel %s" % (filename, VimeoChannelId)
+                out(reason, color="red")
+                dump_file(filename, reason)
                 continue
 
             # Try to get video title
             try:
                 VimeoVideoTitle = re.search(r"<title>(.*?) on Vimeo<\/title>", webpage, re.MULTILINE).group(1)
             except AttributeError:
-                out(
-                    "PARSING FAILED - Can't get VimeoVideoTitle",
-                    color='red',
-                    )
-                dump_file(filename)
+                reason = "PARSING FAILED - Can't get VimeoVideoTitle"
+                out(reason, color='red')
+                dump_file(filename, reason)
                 continue
 
             if re.search(r"creativecommons.org", webpage):
@@ -266,14 +268,16 @@ def checkfiles():
                     'cc0',
                     ]
                 if licensesP1 not in Allowedlicenses:
-                    out("The file is licensed under %s, but it's not allowed on commons" % VimeoLicense, color="red")
-                    dump_file(filename)
+                    reason = "Licensed under %s, and isn't valid on wikimedia commons" % VimeoLicense
+                    out(reason, color="red")
+                    dump_file(filename, reason)
                     continue
             else:
-                out("Creative commons Not found - File is not licensed under any type of creative commons\
-                license including CC-NC/ND", color='red')
-                dump_file(filename)
-                continues
+                reason = "File is not licensed under any type of creative commons\
+                license including CC-NC/ND"
+                out(reason, color='red')
+                dump_file(filename, reason)
+                continue
 
             TAGS = "{{VimeoReview|id=%s|title=%s|license=%s|ChannelID=%s|archive=%s|date=%s}}" % (
                 VimeoVideoId,
@@ -312,11 +316,9 @@ def checkfiles():
                 try:
                     YouTubeVideoId = re.search(r"https?\:\/\/(?:www|m|)(?:|\.)youtube\.com/watch\W(?:feature\\=player_embedded&)?v\=([^\"&?\/ ]{11})", source_area).group(1)
                 except AttributeError:
-                    out(
-                        "PARSING FAILED - Can't get YouTubeVideoId",
-                        color='red'
-                        )
-                    dump_file(filename)
+                    reason = "PARSING FAILED - Can't get YouTubeVideoId"
+                    out(reason, color='red')
+                    dump_file(filename, reason)
                     continue
 
             SourceURL = "https://www.youtube.com/watch?v=%s" % YouTubeVideoId
@@ -324,6 +326,8 @@ def checkfiles():
             res = requests.get("https://eatchabot.toolforge.org/youtube?url=%s&user_agent=%s" % (SourceURL, "User:YouTubeReviewBot on wikimedia commons"))
 
             data = res.json()
+
+
 
             if data['available']:
                 archive_url = data['archive_url']
@@ -333,35 +337,20 @@ def checkfiles():
                 upload_date = data['upload_date']
                 YouTubeChannelId = data['channel_id']
                 license = data['license']
-            else:
-                dump_file(filename)
 
-            total_none = 0
-            if not data['video_title']:
-                YouTubeVideoTitle = ""
-                total_none += 1
-                out("Not found video_title in %s" % archive_url)
-            if not data["channel_id"]:
-                YouTubeChannelId = ""
-                total_none += 1
-                out("Not found channel_id in %s" % archive_url)
-            if not data['channel_name']:
-                YouTubeChannelName = ""
-                total_none += 1
-                out("Not found channel_name in %s" % archive_url)
-            if not data["description"]:
-                description = ""
-                total_none += 1
-                out("Not found description in %s" % archive_url)
-            if not data['upload_date']:
-                upload_date = ""
-                total_none += 1
-                out("Not found upload_date in %s" % archive_url)
-
-            if total_none >= 3:
-                out("Can not parse any data from %s. Dumping file." % archive_url)
-                dump_file(filename)
+            if data['available'] and not data['channel_id'] and not data['channel_name']:
+                reason = "Can not parse data from %s. Dumping file." % archive_url
+                pprint.pprint(data, width=1)
+                out(reason, color="red")
+                dump_file(filename, reason)
                 continue
+            else: # we don't wanna dump files just 'bcuz there is lag on IA's side.
+                pprint.pprint(data, width=1)
+                out("WayBack machine didn't returned the archive_url.")
+                continue
+
+            #Out puts some basic info about the video.
+            display_video_info(YouTubeVideoId, YouTubeChannelId, YouTubeVideoTitle, archive_url, ChannelName=YouTubeChannelName)
 
             TAGS = str(
                 "{{YouTubeReview"
@@ -374,8 +363,6 @@ def checkfiles():
                 "}}"
                 )
 
-            #Out puts some basic info about the video.
-            display_video_info(YouTubeVideoId,YouTubeChannelId,YouTubeVideoTitle,archive_url, ChannelName=YouTubeChannelName)
 
             if check_channel(YouTubeChannelId) == "Trusted":
                 TrustTextAppend = "[[User:YouTubeReviewBot/Trusted|✔️ - Trusted YouTube Channel of  %s ]]" %  YouTubeChannelName
@@ -415,8 +402,9 @@ def checkfiles():
                     new_text
                     )
             else:
-                out("Video is not Creative Commons 3.0 licensed on YouTube nor from a Trusted Channel",color="red")
-                dump_file(filename)
+                reason = "Video is not licensed Creative Commons on YouTube also not from a trusted channel."
+                out(reason ,color="red")
+                dump_file(filename, reason)
                 continue
 
             if new_text == old_text:
