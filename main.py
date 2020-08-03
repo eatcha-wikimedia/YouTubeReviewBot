@@ -93,7 +93,7 @@ def AutoFill(site, text, source, author, VideoTitle, uploaddate, description, Re
 
     #remove scheme from urls
 
-    if re.search(r"\|description=\n",text):
+    if re.search(r"\|description=(?:\n|\s*\n)",text):
         description = "{{%s|%s}}" % (lang.detect(description), description)
         text = text.replace("|description=","|description=%s" % description ,1)
 
