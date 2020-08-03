@@ -66,7 +66,7 @@ def OwnWork(pagetext):
         return True
     return False
 
-def display_video_info(VideoId,ChannelId,VideoTitle,ArchiveUrl,ChannelName="Not Applicable"):
+def display_video_info(VideoId, ChannelId, VideoTitle, ArchiveUrl, ChannelName="Not Applicable"):
     out(
         str(
             "video Id : " + VideoId +
