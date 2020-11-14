@@ -426,24 +426,20 @@ def checkfiles():
         if source_area.isspace(): #check if it's just newlines tabs and spaces.
             source_area = pagetext
 
-        identified_site = None
-        identified_site = DetectSite((source_area.lower()))
-
-        out("A file from %s." % identified_site, color="yellow")
-
-        if not identified_site:
-            out("Skipping cuz source unidentified.", color="yellow")
-            continue
 
         if IsMarkedForDeletion(pagetext) is True:
             out("IGNORE - File is marked for deletion", color='red')
             continue
 
+        identified_site = DetectSite((source_area.lower()))
+        out("A file from %s." % identified_site, color="yellow")
+        if not identified_site and not OwnWork(pagetext):
+            out("Skipping cuz source unidentified and not ownwork.", color="yellow")
+            continue
+
+
         elif identified_site == "VideoWiki":
             handle_videowiki(page, filename, old_text)
-
-        elif OwnWork(pagetext):
-            handle_ownwork(page, filename, old_text)
 
         elif identified_site == "Flickr":
             handle_flickr(page, filename, old_text)
@@ -453,6 +449,10 @@ def checkfiles():
 
         elif identified_site == "YouTube":
             handle_youtube(source_area, page, filename, old_text)
+
+        elif OwnWork(pagetext):
+            handle_ownwork(page, filename, old_text)
+
         else:
             continue
 
