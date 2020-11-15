@@ -57,9 +57,7 @@ def commit(old_text, new_text, page, summary):
         choice = input(question).lower()
 
     if choice in yes:
-        out(
-            "\nAbout to make changes at : '%s'" % page.title()
-            )
+        out("\nAbout to make changes at : '%s'" % page.title())
 
         pywikibot.showDiff(
             old_text,
@@ -78,9 +76,6 @@ def commit(old_text, new_text, page, summary):
 
     else:
         pass
-
-# class File:
-
 
 def AutoFill(site, text, source, author, VideoTitle, uploaddate, description, replace_nld):
     """Auto fills empty information template parameters."""
@@ -170,10 +165,30 @@ def handle_youtube(source_area, page, filename, old_text):
         view_count = youtube_data[9]
         duration = youtube_data[10]
         thumbnail = youtube_data[11]
+    else:
+        reason = "Can't scrape any data from Internet Archive. youtube_data is None."
+        out(reason, color='red')
+        dump_file(filename, reason)
+        return
 
     source_url = "https://www.youtube.com/watch?v=%s" % youtube_video_id
-    out(source_url)
+    # out(source_url)
 
+
+    youtube_data_attributes = {
+    "youtube_video_id" : youtube_video_id,
+    "youtube_channel_id" : youtube_channel_id,
+    "youtube_video_title" : youtube_video_title,
+    "archive_url" : archive_url,
+    "youtube_channel_name" : youtube_channel_name,
+    }
+
+    for youtube_attribute_name, youtube_attribute in youtube_data_attributes.items():
+        if type(youtube_attribute) == None.__class__:
+            reason = "Can't parse %s from %s" % (youtube_attribute_name, archive_url)
+            out(reason, color='red')
+            dump_file(filename, reason)
+            return
 
 
     #Out puts some basic info about the video.
