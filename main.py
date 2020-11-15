@@ -3,12 +3,11 @@ import re
 import sys
 import pywikibot
 import waybackpy
-import requests
 import logging
-import pprint
 import langdetect as lang
 from datetime import datetime
 from pywikibot import pagegenerators
+from youtube import ytdata
 
 from utils import (
 uploader,
@@ -155,38 +154,27 @@ def handle_youtube(source_area, page, filename, old_text):
             dump_file(filename, reason)
             return
 
+    youtube_data = ytdata(youtube_video_id, "User:YouTubeReviewBot on wikimedia commons")
+
+
+    if youtube_data:
+        url = youtube_data[0]
+        user_agent = youtube_data[1]
+        archive_url = youtube_data[2]
+        upload_date = youtube_data[3]
+        description = youtube_data[4]
+        youtube_channel_id = youtube_data[5]
+        youtube_channel_name = youtube_data[6]
+        youtube_video_title = youtube_data[7]
+        license = youtube_data[8]
+        view_count = youtube_data[9]
+        duration = youtube_data[10]
+        thumbnail = youtube_data[11]
 
     source_url = "https://www.youtube.com/watch?v=%s" % youtube_video_id
     out(source_url)
 
-    res = requests.get("https://eatchabot.toolforge.org/youtube?url=%s&user_agent=%s" % (source_url, "User:YouTubeReviewBot on wikimedia commons"))
-    if res.status_code == 200:
-        data = res.json()
-    else:
-        out("Status code %s. Skipping" % (res.status_code) , color="red")
-        return
 
-    if data['available']:
-        archive_url = data['archive_url']
-        youtube_video_title = data['video_title']
-        youtube_channel_name = data['channel_name']
-        description = data['description']
-        upload_date = data['upload_date']
-        youtube_channel_id = data['channel_id']
-        license = data['license']
-    else:
-        reason = "YouTube Data unavailable"
-        out(reason, color="red")
-        dump_file(filename, reason)
-        return
-
-
-    if not data['channel_id'] or not data['channel_name']:
-        reason = "Can not parse data from %s. Dumping file." % archive_url
-        pprint.pprint(data, width=1)
-        out(reason, color="red")
-        dump_file(filename, reason)
-        return
 
     #Out puts some basic info about the video.
     display_video_info(youtube_video_id, youtube_channel_id, youtube_video_title, archive_url, ChannelName=youtube_channel_name)
@@ -434,7 +422,9 @@ def checkfiles():
         identified_site = DetectSite((source_area.lower()))
         out("A file from %s." % identified_site, color="yellow")
         if not identified_site and not OwnWork(pagetext):
-            out("Skipping cuz source unidentified and not ownwork.", color="yellow")
+            reason = "Skipping cuz source unidentified and not ownwork."
+            out(reason, color="yellow")
+            dump_file(filename, reason)
             continue
 
 
