@@ -1,6 +1,113 @@
 import  pywikibot
 from datetime import datetime
+import emoji
+import re
+from collections import OrderedDict
+
 SITE = pywikibot.Site()
+
+#https://github.com/toolforge/video2commons/blob/a2cb6c3212f3230e0fd134f97ac71de23dfaa9ca/video2commons/frontend/urlextract.py#L227
+sanitationRules = [
+    # issue #101
+    {
+        'pattern': emoji.get_emoji_regexp(),
+        'replace': ''
+    },
+    # "signature"
+    {
+        'pattern': re.compile(r'~{3}'),
+        'replace': ''
+    },
+    # Space, underscore, tab, NBSP and other unusual spaces
+    {
+        'pattern': re.compile(r'[ _\u0009\u00A0\u1680\u180E\u2000-\u200A'
+                              r'\u2028\u2029\u202F\u205F\u3000\s]+'),
+        'replace': ' '
+    },
+    # issue #96
+    {
+        'pattern': re.compile(r'\u200B'),
+        'replace': ''
+    },
+    # unicode bidi override characters: Implicit, Embeds, Overrides
+    {
+        'pattern': re.compile(r'[\u200E\u200F\u202A-\u202E]'),
+        'replace': ''
+    },
+    # control characters
+    {
+        'pattern': re.compile(r'[\x00-\x1f\x7f]'),
+        'replace': ''
+    },
+    # URL encoding (possibly)
+    {
+        'pattern': re.compile(r'%([0-9A-Fa-f]{2})'),
+        'replace': r'% \1'
+    },
+    # HTML-character-entities
+    {
+        'pattern': re.compile(r'&(([A-Za-z0-9\x80-\xff]+|'
+                              r'#[0-9]+|#x[0-9A-Fa-f]+);)'),
+        'replace': r'& \1'
+    },
+    # slash, colon (not supported by file systems like NTFS/Windows,
+    # Mac OS 9 [:], ext4 [/])
+    {
+        'pattern': re.compile(r'[:/#]'),
+        'replace': '-'
+    },
+    # brackets, greater than
+    {
+        'pattern': re.compile(r'[\]\}>]'),
+        'replace': ')'
+    },
+    # brackets, lower than
+    {
+        'pattern': re.compile(r'[\[\{<]'),
+        'replace': '('
+    },
+    # directory structures
+    {
+        'pattern': re.compile(r'^(\.|\.\.|\./.*|\.\./.*|.*/\./.*|'
+                              r'.*/\.\./.*|.*/\.|.*/\.\.)$'),
+        'replace': ''
+    },
+    # everything that wasn't covered yet
+    {
+        'pattern': re.compile(r'[|#+?:/\\\u0000-\u001f\u007f]'),
+        'replace': '-'
+    },
+    # titleblacklist-custom-double-apostrophe
+    {
+        'pattern': re.compile(r"'{2,}"),
+        'replace': '"'
+    },
+]
+
+def escape_wikitext(wikitext):
+    """Escape wikitext for use in file description."""
+    rep = OrderedDict([
+        ('{|', '{{(}}&#124;'),
+        ('|}', '&#124;{{)}}'),
+        ('||', '&#124;&#124;'),
+        ('|', '&#124;'),
+        ('[[', '{{!((}}'),
+        (']]', '{{))!}}'),
+        ('{{', '{{((}}'),
+        ('}}', '{{))}}'),
+        ('{', '{{(}}'),
+        ('}', '{{)}}'),
+    ])
+    rep = dict((re.escape(k), v) for k, v in rep.items())
+    pattern = re.compile("|".join(rep.keys()))
+    return pattern.sub(lambda m: rep[re.escape(m.group(0))], wikitext)
+
+def sanitize(filename):
+    """Sanitize a filename for uploading."""
+    for rule in sanitationRules:
+        filename = rule['pattern'].sub(rule['replace'], filename)
+
+    return filename
 
 
 def uploader(filename, link=True):
