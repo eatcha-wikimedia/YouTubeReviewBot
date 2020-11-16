@@ -8,6 +8,10 @@ import langdetect as lang
 from datetime import datetime
 from pywikibot import pagegenerators
 from youtube import ytdata
+import multiprocessing
+import time
+
+
 
 from utils import (
 uploader,
@@ -19,6 +23,8 @@ check_channel,
 OwnWork,
 display_video_info,
 out,
+escape_wikitext,
+sanitize
 )
 
 RegexOfLicenseReviewTemplate = r"{{(?:|\s*)[LlVvYy][IiOo][CcMmUu][EeTt][NnUuOo](?:[SsBbCc][Ee]|)(?:|\s*)[Rr][Ee][Vv][Ii][Ee][Ww](?:|\s*)(?:\|.*|)}}"
@@ -92,8 +98,8 @@ def AutoFill(site, text, source, author, VideoTitle, uploaddate, description, re
 
     #remove scheme from urls
 
-    if re.search(r"\|description=(?:\n|\s*\n)",text):
-        description = "{{%s|%s}}" % (lang.detect(description), description)
+    if re.search(r"\|description=(?:\n|\s*\n)", text):
+        description = "{{%s|%s}}" % (lang.detect(description), escape_wikitext(description))
         text = text.replace("|description=","|description=%s" % description ,1)
 
     if uploaddate:
@@ -453,10 +459,24 @@ def checkfiles():
             handle_flickr(page, filename, old_text)
 
         elif identified_site == "Vimeo":
-            handle_vimeo(source_area, page, filename, old_text)
+            p = multiprocessing.Process(target=handle_vimeo, name="handle_vimeo", args=(source_area, page, filename, old_text))
+            p.start()
+            p.join(120) #2 minutes
+            if p.is_alive():
+                # Terminate handle_youtube
+                p.terminate()
+                p.join()
 
         elif identified_site == "YouTube":
-            handle_youtube(source_area, page, filename, old_text)
+            p = multiprocessing.Process(target=handle_youtube, name="handle_youtube", args=(source_area, page, filename, old_text))
+            p.start()
+            p.join(180) #3 minutes
+            if p.is_alive():
+                # Terminate handle_youtube
+                p.terminate()
+                p.join()
+
+            # handle_youtube(source_area, page, filename, old_text)
 
         elif OwnWork(pagetext):
             handle_ownwork(page, filename, old_text)
