@@ -84,7 +84,11 @@ def ytdata(video_id, user_agent):
             if upload_date:
                 upload_date = str(datetime.strptime(("%s %s %s" % (upload_date.group(2), upload_date.group(1), upload_date.group(3))), "%d %b %Y").date())
             else:
-                upload_date = None
+                upload_date = re.search(r"\"uploadDate\":\"([0-9]{2,4})-([0-9]{1,2})-([0-9]{1,2})\"", source_code)
+                if upload_date:
+                    upload_date = str(datetime.strptime(("%s %s %s" % (upload_date.group(1), upload_date.group(2), upload_date.group(3))), "%Y %m %d").date())
+                else:
+                    upload_date = None
 
 
         video_description = get_video_description(source_code)
