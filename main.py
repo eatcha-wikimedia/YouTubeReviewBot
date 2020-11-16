@@ -280,18 +280,21 @@ def handle_vimeo(source_area, page, filename, old_text):
         try:
             VimeoVideoId = re.search(r"vimeo\.com\/((?:[0-9_]+))", source_area).group(1)
         except AttributeError:
-            out("PARSING FAILED - Can't get VimeoVideoId", color='red')
+            reason = "PARSING FAILED - Can't get VimeoVideoId"
+            out(reason, color='red')
+            dump_file(filename, reason)
             return
 
     source_url = "https://vimeo.com/%s" % VimeoVideoId
     user_agent = "User:YouTubeReviewBot on wikimedia commons"
 
     try:
-        archive_url = waybackpy.Url(source_url, user_agent).newest()
+        archive_url = waybackpy.Url(source_url, user_agent).archive_url
     except Exception:
         try:
             archive_url = waybackpy.Url(source_url, user_agent).save()
         except Exception as e:
+            dump_file(filename, e)
             out(e, color="red")
             return
 
