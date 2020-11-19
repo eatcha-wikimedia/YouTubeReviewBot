@@ -10,7 +10,8 @@ from pywikibot import pagegenerators
 from youtube import ytdata
 import multiprocessing
 import time
-
+import emoji
+from collections import OrderedDict
 
 
 from utils import (
@@ -24,12 +25,32 @@ OwnWork,
 display_video_info,
 out,
 escape_wikitext,
-sanitize
+sanitize,
 )
 
+
+
+
+
 RegexOfLicenseReviewTemplate = r"{{(?:|\s*)[LlVvYy][IiOo][CcMmUu][EeTt][NnUuOo](?:[SsBbCc][Ee]|)(?:|\s*)[Rr][Ee][Vv][Ii][Ee][Ww](?:|\s*)(?:\|.*|)}}"
+USER_AGENT = "User:YouTubeReviewBot on wikimedia commons"
+
+def days_old(file, link=True):
+    """Return the link to the user that uploaded the nominated media."""
+    page = pywikibot.Page(SITE, file)
+    history = page.revisions(reverse=True, total=1)
+    for data in history:
+        ts = (data.timestamp)
+    today = datetime.utcnow()
+    delta_days = (today - ts).days
+    return int(delta_days)
 
 def dump_file(filename, reason):
+
+    #wayback machine API is the most unreliable API I've ever used. Wait for 2 days (lags).
+    if days_old(filename, link=True) < 2:
+        return
+
     """Dump files if review not possible for multiple times."""
     dump1_pagetext = pywikibot.Page(SITE,"User:YouTubeReviewBot/dump1",).get(get_redirect=True)
     dump2_pagetext = pywikibot.Page(SITE,"User:YouTubeReviewBot/dump2",).get(get_redirect=True)
@@ -102,7 +123,7 @@ def AutoFill(site, text, source, author, VideoTitle, uploaddate, description, re
         description = "{{%s|%s}}" % (lang.detect(description), escape_wikitext(description))
         text = text.replace("|description=","|description=%s" % description ,1)
 
-    if uploaddate:
+    if uploaddate and "{{YouTubeReview|id=" not in text:
         text = re.sub("\|date=.*", "|date=%s" % uploaddate, text)
 
     text = re.sub("\|source=.*", "|source=%s" % source, text)
@@ -143,6 +164,10 @@ def handle_flickr(page, filename, old_text):
         out("Page is locked '%s'." % error, color='red')
 
 def handle_youtube(source_area, page, filename, old_text):
+
+    if "{{YouTubeReview|id=" and "|ChannelName=" and "|ChannelID=" in old_text: #Fox files already reviewed by other instance
+        return # YouTubeReview and Information template have date parameter
+
     try:
         youtube_video_id = re.search(
             r"{{\s*?[Ff]rom\s[Yy]ou[Tt]ube\s*(?:\||\|1\=|\s*?)(?:\s*)(?:1|=\||)(?:=|)([^\"&?\/ ]{11})", source_area).group(1)
@@ -155,16 +180,17 @@ def handle_youtube(source_area, page, filename, old_text):
             dump_file(filename, reason)
             return
 
-    youtube_data = ytdata(youtube_video_id, "User:YouTubeReviewBot on wikimedia commons")
+    user_agent = USER_AGENT
+    youtube_data = ytdata(youtube_video_id, user_agent)
 
 
     if youtube_data:
         url = youtube_data[0]
         user_agent = youtube_data[1]
-        archive_url = youtube_data[2]
+        archive_url = str(youtube_data[2])
         upload_date = youtube_data[3]
         description = youtube_data[4]
-        youtube_channel_id = youtube_data[5]
+        youtube_channel_id = str(youtube_data[5])
         youtube_channel_name = youtube_data[6]
         youtube_video_title = youtube_data[7]
         license = youtube_data[8]
@@ -292,7 +318,7 @@ def handle_vimeo(source_area, page, filename, old_text):
             return
 
     source_url = "https://vimeo.com/%s" % VimeoVideoId
-    user_agent = "User:YouTubeReviewBot on wikimedia commons"
+    user_agent = USER_AGENT
 
     try:
         archive_url = waybackpy.Url(source_url, user_agent).archive_url
@@ -406,7 +432,6 @@ def checkfiles():
     gen = pagegenerators.CategorizedPageGenerator(category)
     file_count = 0
     dump_hell = pywikibot.Page(SITE,"User:YouTubeReviewBot/dump3",).get(get_redirect=True)
-
     for page in gen:
         file_count += 1
         filename = page.title()
