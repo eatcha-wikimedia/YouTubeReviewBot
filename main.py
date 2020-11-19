@@ -267,7 +267,7 @@ def handle_youtube(source_area, page, filename, old_text):
         )
 
 
-    if not re.search(r"Creative Commons", license) or check_channel(youtube_channel_id) == "Trusted":
+    if not re.search(r"Creative Commons", license) and not check_channel(youtube_channel_id) == "Trusted":
         reason = "Video is not licensed Creative Commons on YouTube also not from a trusted channel."
         out(reason ,color="red")
         dump_file(filename, reason)
@@ -478,7 +478,7 @@ def checkfiles():
         elif identified_site == "Vimeo":
             p = multiprocessing.Process(target=handle_vimeo, name="handle_vimeo", args=(source_area, page, filename, old_text))
             p.start()
-            p.join(120) #2 minutes
+            p.join(300) #2 minutes
             if p.is_alive():
                 # Terminate handle_youtube
                 p.terminate()
@@ -488,7 +488,7 @@ def checkfiles():
             # handle_youtube(source_area, page, filename, old_text)
             p = multiprocessing.Process(target=handle_youtube, name="handle_youtube", args=(source_area, page, filename, old_text))
             p.start()
-            p.join(180) #3 minutes
+            p.join(300) #3 minutes
             if p.is_alive():
                 # Terminate handle_youtube
                 p.terminate()
