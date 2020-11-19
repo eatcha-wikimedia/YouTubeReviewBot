@@ -12,41 +12,37 @@ import multiprocessing
 import time
 import emoji
 from collections import OrderedDict
-
-
 from utils import (
 uploader,
 last_edit_time,
 informatdate,
-IsMarkedForDeletion,
-DetectSite,
+is_marked_for_deletion,
+detect_source_site,
 check_channel,
-OwnWork,
+is_own_work,
 display_video_info,
 out,
 escape_wikitext,
 sanitize,
 )
 
-
-
-
-
-RegexOfLicenseReviewTemplate = r"{{(?:|\s*)[LlVvYy][IiOo][CcMmUu][EeTt][NnUuOo](?:[SsBbCc][Ee]|)(?:|\s*)[Rr][Ee][Vv][Ii][Ee][Ww](?:|\s*)(?:\|.*|)}}"
+# Global variables
+REGEX_OF_LICENSE_REVIEW_TEMPLATE = r"{{(?:|\s*)[LlVvYy][IiOo][CcMmUu][EeTt][NnUuOo](?:[SsBbCc][Ee]|)(?:|\s*)[Rr][Ee][Vv][Ii][Ee][Ww](?:|\s*)(?:\|.*|)}}"
 USER_AGENT = "User:YouTubeReviewBot on wikimedia commons"
+DRY = None
+AUTO = None
+SITE = None
 
 def days_old(file, link=True):
     """Return the link to the user that uploaded the nominated media."""
     page = pywikibot.Page(SITE, file)
     history = page.revisions(reverse=True, total=1)
     for data in history:
-        ts = (data.timestamp)
-    today = datetime.utcnow()
-    delta_days = (today - ts).days
+        ts = data.timestamp
+    delta_days = (datetime.utcnow() - ts).days
     return int(delta_days)
 
 def dump_file(filename, reason):
-
     #wayback machine API is the most unreliable API I've ever used. Wait for 2 days (lags).
     if days_old(filename, link=True) < 2:
         return
@@ -104,7 +100,7 @@ def commit(old_text, new_text, page, summary):
     else:
         pass
 
-def AutoFill(site, text, source, author, VideoTitle, uploaddate, description, replace_nld):
+def auto_fill(site, text, source, author, VideoTitle, uploaddate, description, replace_nld):
     """Auto fills empty information template parameters."""
     if site == "YouTube":
         License = "{{YouTube CC-BY|%s}}" % author
@@ -138,7 +134,7 @@ def AutoFill(site, text, source, author, VideoTitle, uploaddate, description, re
 #######################   HANDLER FUNCTIONS START  ###############################
 
 def handle_videowiki(page, filename, old_text):
-    new_text = re.sub(RegexOfLicenseReviewTemplate, "" , old_text)
+    new_text = re.sub(REGEX_OF_LICENSE_REVIEW_TEMPLATE, "" , old_text)
     edit_summary = "@%s removing license Review template, not required for video-wiki files\
     because all constituent files are from commons." % uploader(filename, link=True)
 
@@ -148,7 +144,7 @@ def handle_videowiki(page, filename, old_text):
         out("Page is locked '%s'." % error, color='red')
 
 def handle_ownwork(page, filename, old_text):
-    new_text = re.sub(RegexOfLicenseReviewTemplate, "" , old_text)
+    new_text = re.sub(REGEX_OF_LICENSE_REVIEW_TEMPLATE, "" , old_text)
     edit_summary = "@%s removing license Review template, not required for ownwork." % uploader(filename, link=True)
     try:
         commit(old_text, new_text, page, edit_summary)
@@ -156,7 +152,7 @@ def handle_ownwork(page, filename, old_text):
         out("Page is locked '%s'." % error, color='red')
 
 def handle_flickr(page, filename, old_text):
-    new_text = re.sub(RegexOfLicenseReviewTemplate, "{{FlickrReview}}" , old_text)
+    new_text = re.sub(REGEX_OF_LICENSE_REVIEW_TEMPLATE, "{{FlickrReview}}" , old_text)
     edit_summary = "@%s Marking for flickr review, file now in [[Category:Flickr videos review needed]]." % uploader(filename, link=True)
     try:
         commit(old_text, new_text, page, edit_summary)
@@ -184,28 +180,26 @@ def handle_youtube(source_area, page, filename, old_text):
     youtube_data = ytdata(youtube_video_id, user_agent)
 
 
-    if youtube_data:
-        url = youtube_data[0]
-        user_agent = youtube_data[1]
-        archive_url = str(youtube_data[2])
-        upload_date = youtube_data[3]
-        description = youtube_data[4]
-        youtube_channel_id = str(youtube_data[5])
-        youtube_channel_name = youtube_data[6]
-        youtube_video_title = youtube_data[7]
-        license = youtube_data[8]
-        view_count = youtube_data[9]
-        duration = youtube_data[10]
-        thumbnail = youtube_data[11]
-    else:
+    if not youtube_data:
         reason = "Can't scrape any data from Internet Archive. youtube_data is None."
         out(reason, color='red')
         dump_file(filename, reason)
         return
 
-    source_url = "https://www.youtube.com/watch?v=%s" % youtube_video_id
-    # out(source_url)
+    url = youtube_data[0]
+    user_agent = youtube_data[1]
+    archive_url = str(youtube_data[2])
+    upload_date = youtube_data[3]
+    description = youtube_data[4]
+    youtube_channel_id = str(youtube_data[5])
+    youtube_channel_name = youtube_data[6]
+    youtube_video_title = youtube_data[7]
+    license = youtube_data[8]
+    view_count = youtube_data[9]
+    duration = youtube_data[10]
+    thumbnail = youtube_data[11]
 
+    source_url = "https://www.youtube.com/watch?v=%s" % youtube_video_id
 
     youtube_data_attributes = {
     "youtube_video_id" : youtube_video_id,
@@ -221,7 +215,6 @@ def handle_youtube(source_area, page, filename, old_text):
             out(reason, color='red')
             dump_file(filename, reason)
             return
-
 
     #Out puts some basic info about the video.
     display_video_info(youtube_video_id, youtube_channel_id, youtube_video_title, archive_url, ChannelName=youtube_channel_name)
@@ -262,7 +255,7 @@ def handle_youtube(source_area, page, filename, old_text):
         )
 
 
-    new_text = AutoFill(
+    new_text = auto_fill(
         "YouTube",
         old_text,
         ("{{From YouTube|1=%s|2=%s}}" % (youtube_video_id, youtube_video_title)),
@@ -274,20 +267,21 @@ def handle_youtube(source_area, page, filename, old_text):
         )
 
 
-    if re.search(r"Creative Commons", license) or check_channel(youtube_channel_id) == "Trusted":
-        new_text = re.sub(
-            RegexOfLicenseReviewTemplate,
-            TAGS,
-            new_text
-            )
-    else:
+    if not re.search(r"Creative Commons", license) or check_channel(youtube_channel_id) == "Trusted":
         reason = "Video is not licensed Creative Commons on YouTube also not from a trusted channel."
         out(reason ,color="red")
         dump_file(filename, reason)
         return
 
+    new_text = re.sub(
+        REGEX_OF_LICENSE_REVIEW_TEMPLATE,
+        TAGS,
+        new_text,
+        )
+
     if new_text == old_text:
         out("IGONRE - New text was equal to Old text.", color="red")
+        dump_file(filename, reason)
         return
 
     try:
@@ -301,7 +295,7 @@ def handle_youtube(source_area, page, filename, old_text):
     except pywikibot.LockedPage as error:
         out(
             "Page is locked '%s'." % error,
-            color='red'
+            color='red',
             )
         return
 
@@ -341,72 +335,72 @@ def handle_vimeo(source_area, page, filename, old_text):
 
     # Try to get the ChannelID
     try:
-        VimeoChannelId = re.search(r"http(?:s|)\:\/\/vimeo\.com\/(user[0-9]{0,30})\/video", webpage).group(1)
+        vimeo_channel_id = re.search(r"http(?:s|)\:\/\/vimeo\.com\/(user[0-9]{0,30})\/video", webpage).group(1)
     except AttributeError:
         try:
-            VimeoChannelId = re.search(r"https://vimeo\.com/([^:/\"]{0,250}?)/videos\"", webpage).group(1)
+            vimeo_channel_id = re.search(r"https://vimeo\.com/([^:/\"]{0,250}?)/videos\"", webpage).group(1)
         except AttributeError:
-            reason = "PARSING FAILED - Can't get VimeoChannelId"
+            reason = "PARSING FAILED - Can't get vimeo_channel_id"
             out(reason, color='red')
             dump_file(filename, reason)
             return
 
     # If bad Channel do not review it, we do not support trusted Channel for vimeo yet.
-    if check_channel(VimeoChannelId) == "Bad":
-        reason = "DUMP - %s is from a shady channel %s" % (filename, VimeoChannelId)
+    if check_channel(vimeo_channel_id) == "Bad":
+        reason = "DUMP - %s is from a shady channel %s" % (filename, vimeo_channel_id)
         out(reason, color="red")
         dump_file(filename, reason)
         return
 
     # Try to get video title
     try:
-        VimeoVideoTitle = re.search(r"<title>(.*?) on Vimeo<\/title>", webpage, re.MULTILINE).group(1)
+        vimeo_video_title = re.search(r"<title>(.*?) on Vimeo<\/title>", webpage, re.MULTILINE).group(1)
     except AttributeError:
-        reason = "PARSING FAILED - Can't get VimeoVideoTitle"
+        reason = "PARSING FAILED - Can't get vimeo_video_title"
         out(reason, color='red')
         dump_file(filename, reason)
         return
 
-    if re.search(r"creativecommons.org", webpage):
-        StandardCreativeCommonsUrlRegex = re.compile('https\:\/\/creativecommons\.org\/licenses\/(.*?)\/(.*?)\/')
-        matches = StandardCreativeCommonsUrlRegex.finditer(webpage)
-        for m in matches:
-            licensesP1, licensesP2  = (m.group(1)), (m.group(2))
-        VimeoLicense = licensesP1 + "-" + licensesP2
-        Allowedlicenses = [
-            'by-sa',
-            'by',
-            'publicdomain',
-            'cc0',
-            ]
-        if licensesP1 not in Allowedlicenses:
-            reason = "Licensed under %s, and isn't valid on wikimedia commons" % VimeoLicense
-            out(reason, color="red")
-            dump_file(filename, reason)
-            return
-    else:
+    if not re.search(r"creativecommons.org", webpage):
         reason = "File is not licensed under any type of creative commons\
         license including CC-NC/ND"
         out(reason, color='red')
         dump_file(filename, reason)
         return
 
+    standard_creative_commons_url_regex = re.compile('https\:\/\/creativecommons\.org\/licenses\/(.*?)\/(.*?)\/')
+    matches = standard_creative_commons_url_regex.finditer(webpage)
+    for m in matches:
+        license_part_one, license_part_two  = (m.group(1)), (m.group(2))
+    vimeo_license = license_part_one + "-" + license_part_two
+    allowed_licenses = [
+        'by-sa',
+        'by',
+        'publicdomain',
+        'cc0',
+        ]
+    if license_part_one not in allowed_licenses:
+        reason = "Licensed under %s, and isn't valid on wikimedia commons" % vimeo_license
+        out(reason, color="red")
+        dump_file(filename, reason)
+        return
+
     TAGS = "{{VimeoReview|id=%s|title=%s|license=%s|ChannelID=%s|archive=%s|date=%s}}" % (
         VimeoVideoId,
-        VimeoVideoTitle,
-        VimeoLicense,
-        VimeoChannelId,
+        vimeo_video_title,
+        vimeo_license,
+        vimeo_channel_id,
         archive_url,
         informatdate(),
         )
 
     #Out puts some basic info about the video.
-    display_video_info(VimeoVideoId, VimeoChannelId, VimeoVideoTitle, archive_url)
+    display_video_info(VimeoVideoId, vimeo_channel_id, vimeo_video_title, archive_url)
 
-    new_text = re.sub(RegexOfLicenseReviewTemplate, TAGS, old_text)
+    new_text = re.sub(REGEX_OF_LICENSE_REVIEW_TEMPLATE, TAGS, old_text)
 
     edit_summary = "LR Passed, %s , by %s under terms of %s at https://vimeo.com/%s (Archived\
-    - WayBack Machine)" % (VimeoVideoTitle, VimeoChannelId, VimeoLicense, VimeoVideoId)
+    - WayBack Machine)" % (vimeo_video_title, vimeo_channel_id, vimeo_license, VimeoVideoId)
 
     try:
         commit(
@@ -421,7 +415,6 @@ def handle_vimeo(source_area, page, filename, old_text):
 
 
 #######################   HANDLER FUNCTIONS END  ###############################
-
 
 def checkfiles():
     category = pywikibot.Category(
@@ -464,18 +457,17 @@ def checkfiles():
             source_area = pagetext
 
 
-        if IsMarkedForDeletion(pagetext) is True:
+        if is_marked_for_deletion(pagetext) is True:
             out("IGNORE - File is marked for deletion", color='red')
             continue
 
-        identified_site = DetectSite((source_area.lower()))
+        identified_site = detect_source_site((source_area.lower()))
         out("A file from %s." % identified_site, color="yellow")
-        if not identified_site and not OwnWork(pagetext):
+        if not identified_site and not is_own_work(pagetext):
             reason = "Skipping cuz source unidentified and not ownwork."
             out(reason, color="yellow")
             dump_file(filename, reason)
             continue
-
 
         elif identified_site == "VideoWiki":
             handle_videowiki(page, filename, old_text)
@@ -493,6 +485,7 @@ def checkfiles():
                 p.join()
 
         elif identified_site == "YouTube":
+            # handle_youtube(source_area, page, filename, old_text)
             p = multiprocessing.Process(target=handle_youtube, name="handle_youtube", args=(source_area, page, filename, old_text))
             p.start()
             p.join(180) #3 minutes
@@ -501,18 +494,11 @@ def checkfiles():
                 p.terminate()
                 p.join()
 
-            # handle_youtube(source_area, page, filename, old_text)
-
-        elif OwnWork(pagetext):
+        elif is_own_work(pagetext):
             handle_ownwork(page, filename, old_text)
 
         else:
             continue
-
-# Global variables defined at the module level
-DRY = None
-AUTO = None
-SITE = None
 
 def main(*args):
     global SITE
@@ -533,8 +519,6 @@ def main(*args):
     if DRY is not True:
         if not SITE.logged_in():
             SITE.login()
-        else:pass
-    else:pass
 
     # Abort on unknown arguments
     for arg in args:
