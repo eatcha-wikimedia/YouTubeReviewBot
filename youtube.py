@@ -55,23 +55,21 @@ def get_archive(url, user_agent):
         try:
             archive_url = obj.oldest()
         except waybackpy.exceptions.WaybackError as a:
+            out(a, color="red")
             try:
                 archive_url = obj.newest()
             except waybackpy.exceptions.WaybackError as e:
-                if not a:
-                    a = ""
-                out(a + "\n" + e, color="red")
+                out(e, color="red")
     else:
 
         try:
             archive_url = obj.oldest()
         except waybackpy.exceptions.WaybackError as a:
+            out(a, color="red")
             try:
                 archive_url = obj.save()
             except waybackpy.exceptions.WaybackError as e:
-                if not a:
-                    a = ""
-                out(a + "\n" + e, color = "red")
+                out(e, color="red")
 
     return archive_url
 
@@ -176,9 +174,10 @@ def get_youtube_video_title(source_code):
 
 def ytdata(video_id, user_agent):
     url = "https://www.youtube.com/watch?v=%s" % video_id
-    archive_url = str(get_archive(url, user_agent))
+    archive_url = get_archive(url, user_agent)
 
     if archive_url:
+        archive_url = str(archive_url)
         response = requests.get(archive_url)
         source_code = response.text
 
