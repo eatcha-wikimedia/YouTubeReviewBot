@@ -144,7 +144,7 @@ def get_youtube_view_count(source_code):
     return view_count
 
 def get_license(source_code):
-    if re.search(r"Creative Commons", source_code):
+    if not re.search(r"Creative Commons", source_code):
         license = "Creative Commons Attribution license (reuse allowed)"
     else:
         license = "Standard YouTube License"
@@ -176,26 +176,25 @@ def ytdata(video_id, user_agent):
     url = "https://www.youtube.com/watch?v=%s" % video_id
     archive_url = get_archive(url, user_agent)
 
-    if archive_url:
-        archive_url = str(archive_url)
-        response = requests.get(archive_url)
+    if not archive_url:
+        return None
+
+    archive_url = str(archive_url)
+    response = requests.get(archive_url)
+    source_code = response.text
+
+    if not source_code:
+        response = requests.get(url)
         source_code = response.text
 
-        if not source_code:
-            response = requests.get(url)
-            source_code = response.text
+    upload_date = get_upload_date(source_code)
+    video_description = get_video_description(source_code)
+    YouTubeChannelId = get_youtube_channel_id(source_code)
+    YouTubeChannelName = get_youtube_channel_name(source_code)
+    view_count = get_youtube_view_count(source_code)
+    thumbnail = "https://img.youtube.com/vi/%s/maxresdefault.jpg" % video_id
+    license = get_license(source_code)
+    duration = get_duration(source_code)
+    YouTubeVideoTitle = get_youtube_video_title(source_code)
 
-        upload_date = get_upload_date(source_code)
-        video_description = get_video_description(source_code)
-        YouTubeChannelId = get_youtube_channel_id(source_code)
-        YouTubeChannelName = get_youtube_channel_name(source_code)
-        view_count = get_youtube_view_count(source_code)
-        thumbnail = "https://img.youtube.com/vi/%s/maxresdefault.jpg" % video_id
-        license = get_license(source_code)
-        duration = get_duration(source_code)
-        YouTubeVideoTitle = get_youtube_video_title(source_code)
-
-        return (url, user_agent, archive_url, upload_date, video_description, YouTubeChannelId, YouTubeChannelName, YouTubeVideoTitle, license, view_count, duration, thumbnail)
-
-    else:
-        return None
+    return (url, user_agent, archive_url, upload_date, video_description, YouTubeChannelId, YouTubeChannelName, YouTubeVideoTitle, license, view_count, duration, thumbnail)
