@@ -106,9 +106,7 @@ def sanitize(filename):
     """Sanitize a filename for uploading."""
     for rule in sanitationRules:
         filename = rule['pattern'].sub(rule['replace'], filename)
-
     return filename
-
 
 def uploader(filename, link=True):
     """User that uploaded the file."""
@@ -130,7 +128,7 @@ def informatdate():
     """Current date in yyyy-mm-dd format."""
     return (datetime.utcnow()).strftime("%Y-%m-%d")
 
-def IsMarkedForDeletion(pagetext):
+def is_marked_for_deletion(pagetext):
     """Determine if the file is marked for deletion."""
     LowerCasePageText = pagetext.lower()
     if (
@@ -141,7 +139,7 @@ def IsMarkedForDeletion(pagetext):
         ):
             return True
 
-def DetectSite(source_area):
+def detect_source_site(source_area):
     """Identify the source website of the file."""
     if (source_area.find('{{from vimeo') != -1):
         return "Vimeo"
@@ -164,7 +162,7 @@ def check_channel(ChannelId):
         return "Bad"
     return "Normal"
 
-def OwnWork(pagetext):
+def is_own_work(pagetext):
     """Check if own work by uploader."""
     LowerCasePageText = pagetext.lower()
     if (LowerCasePageText.find('{{own}}') != -1):
