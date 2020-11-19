@@ -321,10 +321,10 @@ def handle_vimeo(source_area, page, filename, old_text):
     user_agent = USER_AGENT
 
     try:
-        archive_url = waybackpy.Url(source_url, user_agent).archive_url
+        archive_url = str(waybackpy.Url(source_url, user_agent).oldest())
     except Exception:
         try:
-            archive_url = waybackpy.Url(source_url, user_agent).save()
+            archive_url = str(waybackpy.Url(source_url, user_agent).save())
         except Exception as e:
             dump_file(filename, e)
             out(e, color="red")
@@ -401,7 +401,7 @@ def handle_vimeo(source_area, page, filename, old_text):
         )
 
     #Out puts some basic info about the video.
-    display_video_info(VimeoVideoId,VimeoChannelId,VimeoVideoTitle,archive_url)
+    display_video_info(VimeoVideoId, VimeoChannelId, VimeoVideoTitle, archive_url)
 
     new_text = re.sub(RegexOfLicenseReviewTemplate, TAGS, old_text)
 
