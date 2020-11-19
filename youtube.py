@@ -92,7 +92,7 @@ def get_upload_date(source_code):
     return upload_date
 
 def get_youtube_channel_id(source_code):
-    YouTubeChannelIdRegex1 = r"data-channel-external-id=\"(.{0,30})\""
+    YouTubeChannelIdRegex1 = r"data-channel-external-id=\"(UC[^\",]*?)\""
     YouTubeChannelIdRegex2 = r"[\"']externalChannelId[\"']:[\"']([a-zA-Z0-9_-]{0,25})[\"']"
     YouTubeChannelIdRegex3 = r"\"channelId\":\"(UC[^\",]*?)\","
 
@@ -109,12 +109,12 @@ def get_youtube_channel_id(source_code):
     return YouTubeChannelId
 
 def get_youtube_channel_name(source_code):
-    YouTubeChannelNameRegex1 = r"\\\",\\\"author\\\":\\\"(.{1,50})\\\",\\\""
-    YouTubeChannelNameRegex2 = r"\"ownerChannelName\\\":\\\"(.{1,50})\\\","
+    YouTubeChannelNameRegex1 = r"\\\",\\\"author\\\":\\\"(.*?)\\\",\\\""
+    YouTubeChannelNameRegex2 = r"\"ownerChannelName\\\":\\\"(.*?)\\\","
     YouTubeChannelNameRegex3 = r"Unsubscribe from ([^<{]*?)\?"
     YouTubeChannelNameRegex4 = r"\"ownerChannelName\":\"(.*?)\","
     YouTubeChannelNameRegex5 = r"<span class=\"g-hovercard\" data-name=\"relmfu\" data-ytid=\"(?:[^\"]*?)\">(.*?)</span>"
-    YouTubeChannelNameRegex6 = r"\",\"author\":\"(.{1,50})\",\""
+    YouTubeChannelNameRegex6 = r"\",\"author\":\"(.*?)\",\""
 
     try:
         YouTubeChannelName  = re.search(YouTubeChannelNameRegex1, source_code).group(1)
