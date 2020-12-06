@@ -144,9 +144,8 @@ def get_youtube_view_count(source_code):
     return view_count
 
 def get_license(source_code):
+    license = "Creative Commons Attribution license (reuse allowed)"
     if not re.search(r"Creative Commons", source_code):
-        license = "Creative Commons Attribution license (reuse allowed)"
-    else:
         license = "Standard YouTube License"
     return license
 
