@@ -53,7 +53,7 @@ def get_archive(url, user_agent):
     if archives_count > 5:
 
         try:
-            archive_url = obj.oldest()
+            archive_url = obj.archive_url
         except waybackpy.exceptions.WaybackError as a:
             out(a, color="red")
             try:
@@ -107,32 +107,26 @@ def get_youtube_channel_id(source_code):
     return YouTubeChannelId
 
 def get_youtube_channel_name(source_code):
-    YouTubeChannelNameRegex1 = r"\\\",\\\"author\\\":\\\"(.*?)\\\",\\\""
-    YouTubeChannelNameRegex2 = r"\"ownerChannelName\\\":\\\"(.*?)\\\","
-    YouTubeChannelNameRegex3 = r"Unsubscribe from ([^<{]*?)\?"
-    YouTubeChannelNameRegex4 = r"\"ownerChannelName\":\"(.*?)\","
-    YouTubeChannelNameRegex5 = r"<span class=\"g-hovercard\" data-name=\"relmfu\" data-ytid=\"(?:[^\"]*?)\">(.*?)</span>"
-    YouTubeChannelNameRegex6 = r"\",\"author\":\"(.*?)\",\""
-
-    try:
-        YouTubeChannelName  = re.search(YouTubeChannelNameRegex1, source_code).group(1)
-    except AttributeError:
+    regexes= (
+        "\\\",\\\"author\\\":\\\"(.*?)\\\",\\\"",
+        "\"ownerChannelName\\\":\\\"(.*?)\\\",",
+        "Unsubscribe from ([^<{]*?)\?",
+        "\"ownerChannelName\":\"(.*?)\",",
+        "<span class=\"g-hovercard\" data-name=\"relmfu\" data-ytid=\"(?:[^\"]*?)\">(.*?)</span>",
+        "\",\"author\":\"(.*?)\",\"",
+        "Uploaded\sby\s<a class=\"author\" rel=\"author\" href=\".*?\">([^\n]*?)</a>", #https://web.archive.org/web/20110726191125/http://www.youtube.com/watch?v=doGcMijgWx4
+        "<div id=\"subscribeCount\" class=\"smallText\">to ([^\n]*?)</div>", #https://web.archive.org/web/20061208083125/https://www.youtube.com/watch?v=jNQXAC9IVRw
+        "<a class=\"action-button\" onclick=\"subscribe\(watchUsername, subscribeaxc\); return false;\" title=\"subscribe to ([^\n]*?)'s videos\">", #https://web.archive.org/web/20080220023552/https://www.youtube.com/watch?v=hChq5drjQl4
+        "<link itemprop=\"url\" href=\"http://www\.youtube\.com/user/([^\n]*?)\">",
+    )
+    
+    for regex in regexes:
         try:
-            YouTubeChannelName  = re.search(YouTubeChannelNameRegex2, source_code).group(1)
+            YouTubeChannelName  = re.search(regex, source_code).group(1)
+            break
         except AttributeError:
-            try:
-                YouTubeChannelName  = re.search(YouTubeChannelNameRegex3, source_code).group(1)
-            except AttributeError:
-                try:
-                    YouTubeChannelName  = re.search(YouTubeChannelNameRegex4, source_code).group(1)
-                except AttributeError:
-                    try:
-                        YouTubeChannelName  = re.search(YouTubeChannelNameRegex5, source_code).group(1)
-                    except AttributeError:
-                        try:
-                            YouTubeChannelName  = re.search(YouTubeChannelNameRegex6, source_code).group(1)
-                        except AttributeError:
-                            YouTubeChannelName = None
+            YouTubeChannelName = None
+
     return YouTubeChannelName
 
 def get_youtube_view_count(source_code):
