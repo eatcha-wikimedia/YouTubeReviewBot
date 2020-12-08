@@ -25,55 +25,55 @@ def clean_html(html):
 
 def format_time(millis):
     millis = int(millis)
-    seconds=(millis/1000)%60
-    seconds = int(seconds)
-    minutes=(millis/(1000*60))%60
-    minutes = int(minutes)
-    hours=(millis/(1000*60*60))%24
+    seconds=int((millis/1000)%60)
+    minutes=int((millis/(1000*60))%60)
+    hours=int((millis/(1000*60*60))%24)
     return ("%d:%d:%d" % (hours, minutes, seconds))
-
-def get_video_description(source_code):
-    match = re.search(r"\"description\":{\"simpleText\":\"(.*?)\"},\"lengthSeconds", source_code)
-    if match:
-        video_description = match.group(1)
-    else:
-        match = re.search(r"<p id=\"eow-description\"(?:[^,]*?)>(.*?)<\/p>", source_code)
-        if match:
-            video_description = match.group(1)
-        else:
-            video_description = None
-    return clean_html(video_description)
 
 def get_archive(url, user_agent):
     obj = waybackpy.Url(url, user_agent)
-    archive_url = None
 
     archives_count = obj.total_archives()
 
     if archives_count > 5:
 
         try:
-            archive_url = obj.archive_url
-        except waybackpy.exceptions.WaybackError as a:
-            out(a, color="red")
+            return str(obj.near(year=2020))
+        except waybackpy.exceptions.WaybackError as e:
+            out(e, color="red")
             try:
-                archive_url = obj.newest()
+                return str(obj.newest())
             except waybackpy.exceptions.WaybackError as e:
                 out(e, color="red")
     else:
 
         try:
-            archive_url = obj.oldest()
-        except waybackpy.exceptions.WaybackError as a:
-            out(a, color="red")
+            return str(obj.newest())
+        except waybackpy.exceptions.WaybackError as e:
+            out(e, color="red")
             try:
-                archive_url = obj.save()
+                return str(obj.save())
             except waybackpy.exceptions.WaybackError as e:
                 out(e, color="red")
+    return None
 
-    return archive_url
+def get_video_description(source_code):
+    regexes = (
+    "\"description\":{\"simpleText\":\"(.*?)\"},\"lengthSeconds",
+    "<p id=\"eow-description\"(?:[^,]*?)>(.*?)<\/p>",
+    )
+    for regex in regexes:
+
+        try:
+            video_description = re.search(regex, source_code).group(1)
+            break
+        except AttributeError:
+            video_description = None
+
+    return clean_html(video_description)
 
 def get_upload_date(source_code):
+    # Diffrent output from regexs don't group the regexes
     upload_date = re.search(r"<strong class=\"watch-time-text\">(?:Published on|Premiered) ([A-Za-z]*?) ([0-9]{1,2}), ([0-9]{2,4})</strong>", source_code)
     if upload_date:
         upload_date = datetime.strptime(("%s %s %s" % (upload_date.group(2), upload_date.group(1), upload_date.group(3))), "%d %b %Y").date()
@@ -90,24 +90,24 @@ def get_upload_date(source_code):
     return upload_date
 
 def get_youtube_channel_id(source_code):
-    YouTubeChannelIdRegex1 = r"data-channel-external-id=\"(UC[^\",]*?)\""
-    YouTubeChannelIdRegex2 = r"[\"']externalChannelId[\"']:[\"']([a-zA-Z0-9_-]{0,25})[\"']"
-    YouTubeChannelIdRegex3 = r"\"channelId\":\"(UC[^\",]*?)\","
+    regexes = (
+    "data-channel-external-id=\"(UC[^\",]*?)\"",
+    "[\"']externalChannelId[\"']:[\"']([a-zA-Z0-9_-]{0,25})[\"']",
+    "\"channelId\":\"(UC[^\",]*?)\",",
+    )
 
-    try:
-        YouTubeChannelId = re.search(YouTubeChannelIdRegex1, source_code).group(1)
-    except AttributeError:
+    for regex in regexes:
+
         try:
-            YouTubeChannelId = re.search(YouTubeChannelIdRegex2, source_code).group(1)
+            YouTubeChannelId = re.search(regex, source_code).group(1)
+            break
         except AttributeError:
-            try:
-                YouTubeChannelId = re.search(YouTubeChannelIdRegex3, source_code).group(1)
-            except AttributeError:
-                YouTubeChannelId = None
+            YouTubeChannelId = None
+
     return YouTubeChannelId
 
 def get_youtube_channel_name(source_code):
-    regexes= (
+    regexes = (
         "\\\",\\\"author\\\":\\\"(.*?)\\\",\\\"",
         "\"ownerChannelName\\\":\\\"(.*?)\\\",",
         "Unsubscribe from ([^<{]*?)\?",
@@ -119,8 +119,9 @@ def get_youtube_channel_name(source_code):
         "<a class=\"action-button\" onclick=\"subscribe\(watchUsername, subscribeaxc\); return false;\" title=\"subscribe to ([^\n]*?)'s videos\">", #https://web.archive.org/web/20080220023552/https://www.youtube.com/watch?v=hChq5drjQl4
         "<link itemprop=\"url\" href=\"http://www\.youtube\.com/user/([^\n]*?)\">",
     )
-    
+
     for regex in regexes:
+
         try:
             YouTubeChannelName  = re.search(regex, source_code).group(1)
             break
@@ -131,10 +132,12 @@ def get_youtube_channel_name(source_code):
 
 def get_youtube_view_count(source_code):
     match = re.search(r"videoViewCountRenderer\":{\"viewCount\":{\"simpleText\":\"([0-9,]*?) views\"},\"shortViewCount\":{\"simpleText\"", source_code)
+
     if match:
         view_count = match.group(1)
     else:
          view_count = None
+
     return view_count
 
 def get_license(source_code):
@@ -144,22 +147,31 @@ def get_license(source_code):
     return license
 
 def get_duration(source_code):
-    match = re.search(r"approxDurationMs\\\":\\\"([0-9]*?)\\\"", source_code)
-    if match:
-        duration = format_time(match.group(1))
-    else:
-        duration = None
+    regexes = (
+    "approxDurationMs\\\":\\\"([0-9]*?)\\\"",
+    )
+
+    for regex in regexes:
+
+        try:
+            duration = format_time(re.search(regex, source_code).group(1))
+            break
+        except AttributeError:
+            duration = None
+
     return duration
 
 def get_youtube_video_title(source_code):
-    YouTubeVideoTitleRegex1 = r"<title>(?:\s*|)(.{1,250})(?:\s*|)- YouTube(?:\s*|)</title>"
-    YouTubeVideoTitleRegex2 = r"\"title\":\"(.{1,160})\",\"length"
+    regexes = (
+    "<title>(?:\s*|)(.{1,250})(?:\s*|)- YouTube(?:\s*|)</title>",
+    "\"title\":\"(.{1,160})\",\"length",
+    )
 
-    try:
-        YouTubeVideoTitle   = clean_html(re.search(YouTubeVideoTitleRegex1, source_code).group(1))
-    except AttributeError:
+    for regex in regexes:
+
         try:
-            YouTubeVideoTitle   = clean_html(re.search(YouTubeVideoTitleRegex2, source_code).group(1))
+            YouTubeVideoTitle  = clean_html(re.search(regex, source_code).group(1))
+            break
         except AttributeError:
             YouTubeVideoTitle = None
 
