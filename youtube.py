@@ -65,7 +65,7 @@ def get_video_description(source_code):
     for regex in regexes:
 
         try:
-            video_description = re.search(regex, source_code).group(1)
+            video_description = re.search(regex, source_code).group(1).replace("|", "&#124;")
             break
         except AttributeError:
             video_description = None
@@ -123,7 +123,7 @@ def get_youtube_channel_name(source_code):
     for regex in regexes:
 
         try:
-            YouTubeChannelName  = re.search(regex, source_code).group(1)
+            YouTubeChannelName  = re.search(regex, source_code).group(1).replace("|", "&#124;")
             break
         except AttributeError:
             YouTubeChannelName = None
@@ -170,7 +170,7 @@ def get_youtube_video_title(source_code):
     for regex in regexes:
 
         try:
-            YouTubeVideoTitle  = clean_html(re.search(regex, source_code).group(1))
+            YouTubeVideoTitle  = clean_html(re.search(regex, source_code).group(1)).replace("|", "&#124;")
             break
         except AttributeError:
             YouTubeVideoTitle = None
