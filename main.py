@@ -514,7 +514,7 @@ def main(*args):
             sys.argv.remove(arg)
             continue
     args = pywikibot.handle_args(*args)
-    SITE = pywikibot.Site()
+    SITE = pywikibot.Site("commons", "commons")
 
     if DRY is not True:
         if not SITE.logged_in():
