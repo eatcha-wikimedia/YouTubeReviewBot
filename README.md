@@ -7,3 +7,6 @@
 [![Known Vulnerabilities](https://snyk.io/test/github/eatcha-wikimedia/YouTubeReviewBot/badge.svg?targetFile=requirements.txt)](https://snyk.io/test/github/eatcha-wikimedia/YouTubeReviewBot?targetFile=requirements.txt)
 
 <https://commons.wikimedia.org/wiki/Special:Contributions/YouTubeReviewBot>
+
+## Acknowledgements
+- Some of the code is from Video2Commons or based on related code in it. [video2commons](https://github.com/toolforge/video2commons)' license can be found [here](https://github.com/toolforge/video2commons/blob/master/LICENSE).
