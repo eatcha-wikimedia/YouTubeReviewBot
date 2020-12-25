@@ -1,4 +1,4 @@
-waybackpy==2.2.0
+waybackpy==2.3.0
 requests==2.25.1
 emoji==0.6.0
 langdetect==1.0.8
