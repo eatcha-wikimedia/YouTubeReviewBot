@@ -193,7 +193,7 @@ def handle_youtube(source_area, page, filename, old_text):
     description = youtube_data[4]
     youtube_channel_id = str(youtube_data[5])
     youtube_channel_name = youtube_data[6]
-    youtube_video_title = youtube_data[7]
+    youtube_video_title = youtube_data[7].replace("|", "&#124;")
     license = youtube_data[8]
     view_count = youtube_data[9]
     duration = youtube_data[10]
